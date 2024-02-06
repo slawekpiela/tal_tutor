@@ -1,11 +1,11 @@
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
-
+from configuration import sender_passwords
 from configuration import sender_passwords
 
-
-def send_email(sender_email, sender_password, recipient_email, subject, body):
+sender_password =sender_passwords
+def send_email(sender_email,recipient_email, subject, body):
     # Create a MIMEMultipart message
     print("send to: ", recipient_email, " ", subject, " ", body)
     print("body is; ", body)

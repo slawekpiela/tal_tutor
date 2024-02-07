@@ -1,30 +1,42 @@
-from configuration import whereby_api_key
-from whereby_utils import  get_last_recording_id, extract_audio, get_access_link_to_last_recording, download_last_recording, transcribe_local
-import whisper
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from configuration import sender_passwords
+from configuration import sender_passwords
 
+sender_password =sender_passwords
+def send_email(sender_email,recipient_email, subject, body):
+    # Create a MIMEMultipart message
+    print("send to: ", recipient_email, " ", subject, " ", body)
+    print("body is; ", body)
+    msg = MIMEMultipart()
 
-def transcr(audio_file):
-    model = whisper.load_model("medium")
-    result = model.transcribe(audio_file)
-    print("result",result["text"])
+    msg['From'] = sender_email
+    msg['To'] = recipient_email
+    msg['Subject'] = subject
 
-    return result["text"]
+    # Add the email body to the message.
+    msg.attach(MIMEText(body, 'plain'))
 
-last_rec_id=get_last_recording_id()
-access_link=get_access_link_to_last_recording((last_rec_id))
-downloaded_file=download_last_recording(access_link)
-audio_file=extract_audio(downloaded_file)
-transcript= transcribe_local(audio_file)
-print(transcript)
+    # Set up the SMTP server
+    server = smtplib.SMTP('smtp.gmail.com', 587)
+    server.starttls()  # Enable security
+    server.login(sender_email, sender_password)  # Log in to the SMTP server
 
+    # Send the email
+    server.send_message(msg)
+    server.quit()
 
+    print("Email 1 sent successfully!")
+    # return
+    # nie dajemy pustego return na końcu funkcji, jest tam domyślnie
 
+send_email('slawek.piela@koios-mail.pl','slawek.piela@mac.com','test', 'this is a test')
+# Email details
+# sender_email = "slawek.piela@koios-mail.pl"  # Replace with your Gmail address
+# sender_password = sender_passwords  # Replace with your Gmail password or app-specific password
+# recipient_email = "slawek.piela@koios-mail.pl"  # Replace with the recipient's email address
+# subject = "KOIOS"
+# body = "Czy KOIOS obsługuje tagi NFC?"
 
-#
-# audio_file= extract_audio(downloaded_file) # extract audio
-#
-# print(transcr(audio_file))
-#
-#
-
-
+# send_email(sender_email, sender_password, recipient_email, subject, body)

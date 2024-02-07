@@ -94,8 +94,8 @@ def download_last_recording(url):
 
 
 def transcribe_local(file):
-    model = whisper.load_model("large")
-    result = model.transcribe("data/audiotest3.m4a")
+    model = whisper.load_model("medium")
+    result = model.transcribe(file)
 
     return (result["text"])
 
@@ -204,7 +204,7 @@ def get_last_recording_id():
         # Check if the results list is not empty
         if data["results"]:
             # Extract the recordingId of the last recording from the results list
-            return data["results"][-1]["recordingId"]
+            return data["results"][0]["recordingId"]
         else:
             return False
     else:

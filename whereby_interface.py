@@ -3,7 +3,7 @@ from whereby_utils import is_valid_email  # Make sure to import this here if nee
 
 
 def get_lesson_data():
-    st.sidebar.title("Wygeneruj lekcję")
+
     data = st.date_input("Podaj datę")
     godzina = st.time_input("Podaj godzinę")
     col1, col2 = st.columns(2)
@@ -16,6 +16,5 @@ def get_lesson_data():
 
     if is_valid_email(email_n1, email_n2, email_u1, email_u2) and email_n1.lower() == email_n2.lower():
         return True, data, godzina, email_n1, email_u1  # Return all necessary data
-    elif st.session_state.button_pressed:
-        st.write("Emaile nie są takie same lub błędny format emial")
+    # #
     return False, None, None, None, None  # Return False and None for other values if validation fails

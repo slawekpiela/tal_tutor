@@ -1,5 +1,5 @@
 # main.py
-
+#
 import streamlit as st
 from whereby_interface import get_lesson_data  # Import the UI setup function
 from whereby_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
@@ -43,4 +43,3 @@ try:
 except AttributeError:
     st.session_state.button_pressed = False
 
-    

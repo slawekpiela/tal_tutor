@@ -30,7 +30,7 @@ def send_email(sender_email,recipient_email, subject, body):
     print("Email 1 sent successfully!")
     # return
     # nie dajemy pustego return na końcu funkcji, jest tam domyślnie
-#
+
 send_email('slawek.piela@koios-mail.pl','slawek.piela@mac.com','test', 'this is a test')
 # Email details
 # sender_email = "slawek.piela@koios-mail.pl"  # Replace with your Gmail address

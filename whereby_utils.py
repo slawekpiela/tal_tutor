@@ -5,6 +5,7 @@ import whisper
 import re
 from moviepy.editor import VideoFileClip
 import os
+from datetime import timedelta, datetime
 
 
 def is_valid_email(*emails):
@@ -89,7 +90,6 @@ def download_last_recording(url):
     else:
         print(f"Failed to download the file. Status code: {response.status_code}")
 
-
     return output_path
 
 
@@ -124,8 +124,10 @@ def extract_audio(file):  # get video file and save audio in /data directory and
 
 
 def create_rooms():
+    end_meeting_validity_date = get_tomorrow_noon()
+    print(end_meeting_validity_date)
     data = {
-        "endDate": "2024-02-07T17:42:49Z",  # Specify your end date in UTC
+        "endDate": "2024-02-08T12:00:00Z",  # Specify your end date in UTC
         "isLocked": True,
         "roomMode": "group",  # Use "group" for more than 4 participants
         "roomNamePrefix": "Krotka-",
@@ -189,6 +191,14 @@ def delete_last_recording(recording_id):
     return
 
 
+def get_tomorrow_noon():
+    today = datetime.now()
+    tomorrow = today + timedelta(days=1)
+    tomorrow_formatted = tomorrow.strftime('%Y-%m-%d')
+
+    return (f'{tomorrow_formatted}T12:00:00Z')
+
+
 def get_last_recording_id():
     headers = {
         "Authorization": f"Bearer {whereby_api_key}",
@@ -209,3 +219,73 @@ def get_last_recording_id():
             return False
     else:
         return "error"
+
+
+def get_airtable_list():
+    return
+
+
+def create_uniqe_word_list_from_transcription(text):
+    text_chunk = text
+
+    text_chunk = text_chunk.lower()
+
+    # Split the text into words
+    text_chunk = text_chunk.split()
+
+    # Remove punctuation marks from the words
+    text_chunk = [word.strip(".,!?") for word in text_chunk]
+
+    # add words to 'words' list from airtable that already are there
+    words_at = ["4", "5", "6", "7", "8", "9"]  # get_airtable_list()
+
+    new_words = [word for word in text_chunk if word not in words_at]
+
+    # Select unique words
+    unique_words = list(set(new_words))
+
+    return unique_words
+
+
+def upload_new_word_to_airtable(list_of_words)
+    for word in list_of_words
+        translation = get_translation(word)
+        translation_extended = get_translated_ext(word)
+        transcript = get_transcript(word)
+        tupla_for_save=[translation, transation_extended, transcript]
+        save_new_word_to_airtable(word)
+
+        return
+
+def save_new_word_to_airtable(tuple_4at)
+    api_key = 'YOUR_AIRTABLE_API_KEY'
+    base_id = 'YOUR_AIRTABLE_BASE_ID'
+    table_name = 'YOUR_AIRTABLE_TABLE_NAME'
+
+    endpoint = f'https://api.airtable.com/v0/{base_id}/{table_name}'
+
+    headers = {
+        'Authorization': f'Bearer {api_key}',
+        'Content-Type': 'application/json'
+    }
+
+    payload = {
+        'fields': {
+            'Word': tuple_4at[0],
+            'Translation': tuple_4at[1],
+            'Translation_Extended': tuple_4at[2],
+            'Transcript': tuple_4at[3]
+        }
+    }
+
+    response = requests.post(endpoint, headers=headers, json=payload)
+
+    if response.status_code == 200:
+        print('Word saved successfully to Airtable!')
+    else:
+        print(f'Error saving word to Airtable: {response.status_code} - {response.text}')
+
+
+# Example usage
+data = ('apple', 'Translation of apple', 'Extended translation of apple', 'Transcript of apple')
+save_new_word_to_airtable(data)

@@ -15,7 +15,7 @@ def timing_decorator(func):
 
 
 @timing_decorator
-@cache_decorator
+
 def transcr(audio_file):
     model = whisper.load_model("large")
     result = model.transcribe("data/audiotest2.mp3")

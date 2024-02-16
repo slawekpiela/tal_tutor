@@ -12,7 +12,7 @@ def send_email(sender_email,recipient_email, subject, body):
     msg = MIMEMultipart()
 
     msg['From'] = sender_email
-    msg['To'] = recipient_email
+    msg['To'] = recipient_ema
     msg['Subject'] = subject
 
     # Add the email body to the message.

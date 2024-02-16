@@ -27,7 +27,7 @@ try:
             link1 = f'"Nauczyciel:"{host_room} Uczeń: {student_room}'
             body_of_email_teacher=f'Nauczyciel: {host_room} \n Uczeń: {student_room}'
             st.write(link1)
-            send_email("slawek.piela@koios-mail.pl", email_n1, "Zaproszenie na zajęcia", body_of_email_teacher)
+            #send_email("slawek.piela@koios-mail.pl", email_n1, "Zaproszenie na zajęcia", body_of_email_teacher)
 except AttributeError:
     st.session_state.button_pressed = False
 

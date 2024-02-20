@@ -6,7 +6,9 @@ import re
 from moviepy.editor import VideoFileClip
 import os
 from datetime import timedelta, datetime
-
+import subprocess
+import imageio_ffmpeg
+import mimetypes
 
 def is_valid_email(*emails):
     # Simple regex pattern for validating an email
@@ -199,6 +201,27 @@ def get_tomorrow_noon():
     return (f'{tomorrow_formatted}T12:00:00Z')
 
 
+def is_mp3(file_path):
+    # Guess the type of a file based on its filename
+    mime_type, _ = mimetypes.guess_type(file_path)
+    return mime_type == 'audio/mpeg'
+
+
+
+
+
+def check_and_convert_to_mp3(file_path):
+    # Check if the file is already an MP3
+    if not file_path.lower().endswith('.mp3'):
+        output_file_path = os.path.splitext(file_path)[0] + ".mp3"
+        # Ensure numerical values are passed as strings
+        subprocess.run(["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", str(output_file_path)], check=True)
+        return output_file_path
+    else:
+        # File is already an MP3, no conversion needed
+        return file_path
+
+
 def get_last_recording_id():
     headers = {
         "Authorization": f"Bearer {whereby_api_key}",
@@ -247,8 +270,8 @@ def create_uniqe_word_list_from_transcription(text):
     return unique_words
 
 
-def upload_new_word_to_airtable(list_of_words)
-    for word in list_of_words
+def upload_new_word_to_airtable(list_of_words):
+    for word in list_of_words:
         translation = get_translation(word)
         translation_extended = get_translated_ext(word)
         transcript = get_transcript(word)
@@ -257,7 +280,7 @@ def upload_new_word_to_airtable(list_of_words)
 
         return
 
-def save_new_word_to_airtable(tuple_4at)
+def save_new_word_to_airtable(tuple_4at):
     api_key = 'YOUR_AIRTABLE_API_KEY'
     base_id = 'YOUR_AIRTABLE_BASE_ID'
     table_name = 'YOUR_AIRTABLE_TABLE_NAME'

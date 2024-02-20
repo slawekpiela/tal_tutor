@@ -1,5 +1,8 @@
 import whisper
 from mutagen.mp3 import MP3
+from whereby_utils import check_and_convert_to_mp3
+import subprocess
+import mimetypes
 
 
 def timing_decorator(func):
@@ -17,15 +20,19 @@ def timing_decorator(func):
 @timing_decorator
 
 def transcr(audio_file):
-    model = whisper.load_model("large")
-    result = model.transcribe("data/audiotest2.mp3")
+    model = whisper.load_model("small")
+    result = model.transcribe("data/earth_2_moon2.m4a")
     print("result",result["text"])
 
     return result["text"]
-
-audio_file_path = "data/audiotest2.mp3"
+print("st")
+audio_file_path = "data/earth_2_moon2.mp3"
+print("to convert:", audio_file_path)
+check_and_convert_to_mp3(audio_file_path)
+print('after conv: ', audio_file_path)
 audio = MP3(audio_file_path)
 print(f"Length: {audio.info.length/60} minutes")
+transcr(audio_file_path)
 
 
 

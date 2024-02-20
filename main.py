@@ -3,7 +3,7 @@
 import streamlit as st
 from whereby_interface import get_lesson_data  # Import the UI setup function
 from whereby_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
-    download_last_recording, transcribe_local
+    download_last_recording, transcribe_local, check_and_convert_to_mp3
 from mail_out import send_email
 
 # Initialize session state variables if they don't exist
@@ -19,6 +19,10 @@ if st.sidebar.button("Nowa lekcja"):
 
 if st.sidebar.button("Pobierz transkrypcję ostatniej lekcji"):
     st.session_state.button_2_pressed = True
+
+if st.sidebar.button("Wrzuc plik do transkrypcji"):
+    st.session_state.button_3_pressed = True
+
 try:
     if st.session_state.button_pressed:
         valid_data, data, godzina, email_n1, email_u1 = get_lesson_data()
@@ -43,3 +47,9 @@ try:
 except AttributeError:
     st.session_state.button_pressed = False
 
+try:
+    if st.session_state.button_3_pressed:
+         uploaded_file= st.sidebar.file_uploader("Wrzuć plik")
+
+except AttributeError:
+    st.session_state.button_pressed = False

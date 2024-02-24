@@ -1,5 +1,5 @@
 import streamlit as st
-from whereby_utils import is_valid_email  # Make sure to import this here if needed
+from tal_utils import is_valid_email  # Make sure to import this here if needed
 
 
 def get_lesson_data():

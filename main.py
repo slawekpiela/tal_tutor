@@ -1,8 +1,8 @@
 # main.py
 
 import streamlit as st
-from whereby_interface import get_lesson_data  # Import the UI setup function
-from whereby_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
+from tal_interface import get_lesson_data  # Import the UI setup function
+from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
     download_last_recording, transcribe_local, check_and_convert_to_mp3
 from mail_out import send_email
 
@@ -50,6 +50,13 @@ except AttributeError:
 try:
     if st.session_state.button_3_pressed:
          uploaded_file= st.sidebar.file_uploader("Wrzuć plik")
+         st.write('uploaded')
+         converted_txt=check_and_convert_to_mp3(uploaded_file)
+         st.write("checked")
+         trsc_txt=transcribe_local(converted_txt)
+         st.write(trsc_txt)
+
+
 
 except AttributeError:
     st.session_state.button_pressed = False

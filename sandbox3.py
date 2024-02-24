@@ -1,21 +1,25 @@
-text_chunk = "text, or not tesxt"
+def select_only_new_words(added_text, base_text):
+    added_text=added_text.split()
 
-# Convert the text to lowercase to ensure case insensitivity
-text_chunk = text_chunk.lower()
+    # Clean old_text by removing punctuation and converting to lowercase
+    old_text_cleaned = [word.strip(".,!?").lower() for word in added_text]
 
-# Split the text into words
-text_chunk = text_chunk.split()
+    # Assuming new_text is a list of words you want to exclude
+    # and it's already cleaned and in the correct format
+    new_words = [word for word in old_text_cleaned if word not in base_text]
 
-# Remove punctuation marks from the words
-text_chunk = [word.strip(".,!?") for word in text_chunk]
+    # Select unique words to avoid duplicates
+    unique_words = list(set(new_words))
 
-# add words to 'words' list from airtable that already are there
-words_at = ["4", "5", "6", "7", "8", "9"]  # get_airtable_list()
+    return unique_words
 
-new_words = [word for word in text_chunk if word not in words_at]
 
-# Select unique words
-unique_words = list(set(new_words))
+# Test data
+added_text = "Text or tessst 7 mpore me"
+base_text = ["4", "5",  "me", "9"]
 
+# Call the function with the test data
+unique_words = select_only_new_words(added_text, base_text)
+
+# Print the result
 print(unique_words)
-

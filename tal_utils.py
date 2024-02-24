@@ -1,5 +1,8 @@
 import requests
 import json
+
+import streamlit as st
+
 from configuration import whereby_api_key, tiny_api_key
 import whisper
 import re
@@ -212,10 +215,12 @@ def is_mp3(file_path):
 
 def check_and_convert_to_mp3(file_path):
     # Check if the file is already an MP3
+    st.write('conv satrt')
     if not file_path.lower().endswith('.mp3'):
         output_file_path = os.path.splitext(file_path)[0] + ".mp3"
         # Ensure numerical values are passed as strings
         subprocess.run(["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", str(output_file_path)], check=True)
+        st.write(output_file_path)
         return output_file_path
     else:
         # File is already an MP3, no conversion needed
@@ -280,6 +285,8 @@ def upload_new_word_to_airtable(list_of_words):
 
         return
 
+
+
 def save_new_word_to_airtable(tuple_4at):
     api_key = 'YOUR_AIRTABLE_API_KEY'
     base_id = 'YOUR_AIRTABLE_BASE_ID'
@@ -309,6 +316,21 @@ def save_new_word_to_airtable(tuple_4at):
         print(f'Error saving word to Airtable: {response.status_code} - {response.text}')
 
 
-# Example usage
-data = ('apple', 'Translation of apple', 'Extended translation of apple', 'Transcript of apple')
-save_new_word_to_airtable(data)
+# # Example usage
+# data = ('apple', 'Translation of apple', 'Extended translation of apple', 'Transcript of apple')
+# save_new_word_to_airtable(data)
+
+def select_only_new_words(added_text, base_text):
+    added_text=added_text.split()
+
+    # Clean old_text by removing punctuation and converting to lowercase
+    old_text_cleaned = [word.strip(".,!?").lower() for word in added_text]
+
+    # Assuming new_text is a list of words you want to exclude
+    # and it's already cleaned and in the correct format
+    new_words = [word for word in old_text_cleaned if word not in base_text]
+
+    # Select unique words to avoid duplicates
+    unique_words = list(set(new_words))
+
+    return unique_words

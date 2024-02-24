@@ -1,6 +1,6 @@
 import whisper
 from mutagen.mp3 import MP3
-from whereby_utils import check_and_convert_to_mp3
+from tal_utils import check_and_convert_to_mp3
 import subprocess
 import mimetypes
 
@@ -23,8 +23,11 @@ def transcr(audio_file):
     model = whisper.load_model("small")
     result = model.transcribe("data/earth_2_moon2.m4a")
     print("result",result["text"])
+    trsc_text= result["text"]
+    return trsc_text
 
-    return result["text"]
+
+
 print("st")
 audio_file_path = "data/earth_2_moon2.mp3"
 print("to convert:", audio_file_path)

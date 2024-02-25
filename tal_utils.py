@@ -1,8 +1,8 @@
 import requests
 import json
-
+import magic
 import streamlit as st
-
+import fitz
 from configuration import whereby_api_key, tiny_api_key
 import whisper
 import re
@@ -12,6 +12,7 @@ from datetime import timedelta, datetime
 import subprocess
 import imageio_ffmpeg
 import mimetypes
+
 
 def is_valid_email(*emails):
     # Simple regex pattern for validating an email
@@ -72,7 +73,7 @@ def shorten_url(url):
     return tinyurl
 
 
-def download_last_recording(url):
+def download_last_recording(url):  # download last whereby recording (requires APIkey)
     output_directory = 'data/'
     output_filename = 'video_4_extract.mp4'
 
@@ -99,20 +100,55 @@ def download_last_recording(url):
 
 
 def transcribe_local(file):
-    model = whisper.load_model("medium")
+    st.write('transcribing')
+    model = whisper.load_model("large")
     result = model.transcribe(file)
 
     return (result["text"])
 
 
+def check_file_type(file_path):
+    file_type = magic.from_file(file_path, mime=True)
+    st.write('Checking file type:')
+    if file_type.startswith('audio'):
+        st.write('Audio file detected')
+        check_and_convert_to_mp3(file_path)
+        return file_path
+    elif file_type.startswith('video'):
+        st.write('Video file detected')
+        file_path_old = file_path
+        file_path = extract_audio(file_path)
+        os.remove(file_path_old)
+        return file_path
+    elif file_type == 'application/pdf':
+        st.write('PDF file detected2')
+        # Here you might want to set 'typ' or process the PDF as needed
+        # For demonstration, returning 'pdf' to indicate a PDF was detected
+        return 'pdf'
+    elif file_type.startswith('text'):
+        st.write('Text file detected')
+        # Similarly, process text file as needed
+        return 'text'
+
+    st.write(f"Detected MIME type: {file_type}")
+    return 'unknown'
+
+
 def extract_audio(file):  # get video file and save audio in /data directory and return audio file as object 'audio'
+ try:
     output_directory = 'data'
 
+    # Ensure the output directory exists
     if not os.path.exists(output_directory):
         os.makedirs(output_directory)
 
+    # Derive the base name and replace its extension with .mp3
+    base_name = os.path.basename(file)
+    name_without_ext = os.path.splitext(base_name)[0]
+    audio_file_name = name_without_ext + ".mp3"
+
     # Specify the path for the output audio file, including the directory
-    audio_file = os.path.join(output_directory, 'file_for_whisper.mp3')
+    audio_file = os.path.join(output_directory, audio_file_name)
 
     # Load the video file
     video = VideoFileClip(file)
@@ -123,10 +159,9 @@ def extract_audio(file):  # get video file and save audio in /data directory and
     # Write the audio to a file in the specified directory
     audio.write_audiofile(audio_file)
 
-    print(f'Audio extracted and saved to {audio_file}')
-
     return audio_file
-
+ except:
+    st.write('error')
 
 def create_rooms():
     end_meeting_validity_date = get_tomorrow_noon()
@@ -204,30 +239,26 @@ def get_tomorrow_noon():
     return (f'{tomorrow_formatted}T12:00:00Z')
 
 
-def is_mp3(file_path):
-    # Guess the type of a file based on its filename
-    mime_type, _ = mimetypes.guess_type(file_path)
-    return mime_type == 'audio/mpeg'
-
-
-
-
-
-def check_and_convert_to_mp3(file_path):
+def check_and_convert_to_mp3(file_path):  # converts to mp3 from wav or ma4
     # Check if the file is already an MP3
-    st.write('conv satrt')
+
     if not file_path.lower().endswith('.mp3'):
         output_file_path = os.path.splitext(file_path)[0] + ".mp3"
+        st.write('converting')
         # Ensure numerical values are passed as strings
-        subprocess.run(["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", str(output_file_path)], check=True)
+        subprocess.run(
+            ["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", str(output_file_path)],
+            check=True)
         st.write(output_file_path)
         return output_file_path
     else:
         # File is already an MP3, no conversion needed
+        st.write('it is mp3')
+
         return file_path
 
 
-def get_last_recording_id():
+def get_last_recording_id():  # whereby last recording ID
     headers = {
         "Authorization": f"Bearer {whereby_api_key}",
         "Content-Type": "application/json",
@@ -253,38 +284,15 @@ def get_airtable_list():
     return
 
 
-def create_uniqe_word_list_from_transcription(text):
-    text_chunk = text
-
-    text_chunk = text_chunk.lower()
-
-    # Split the text into words
-    text_chunk = text_chunk.split()
-
-    # Remove punctuation marks from the words
-    text_chunk = [word.strip(".,!?") for word in text_chunk]
-
-    # add words to 'words' list from airtable that already are there
-    words_at = ["4", "5", "6", "7", "8", "9"]  # get_airtable_list()
-
-    new_words = [word for word in text_chunk if word not in words_at]
-
-    # Select unique words
-    unique_words = list(set(new_words))
-
-    return unique_words
-
-
 def upload_new_word_to_airtable(list_of_words):
     for word in list_of_words:
         translation = get_translation(word)
         translation_extended = get_translated_ext(word)
         transcript = get_transcript(word)
-        tupla_for_save=[translation, transation_extended, transcript]
+        tupla_for_save = [translation, transation_extended, transcript]
         save_new_word_to_airtable(word)
 
         return
-
 
 
 def save_new_word_to_airtable(tuple_4at):
@@ -321,7 +329,7 @@ def save_new_word_to_airtable(tuple_4at):
 # save_new_word_to_airtable(data)
 
 def select_only_new_words(added_text, base_text):
-    added_text=added_text.split()
+    added_text = added_text.split()
 
     # Clean old_text by removing punctuation and converting to lowercase
     old_text_cleaned = [word.strip(".,!?").lower() for word in added_text]

@@ -3,7 +3,8 @@ import os, shutil
 import streamlit as st
 from tal_interface import get_lesson_data  # Import the UI setup function
 from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
-    download_last_recording, transcribe_local, transcribe_any_file_type, save_uploaded_file, create_new_list_to_add_to_airtable, move_file_to_repo
+    download_last_recording, transcribe_local, transcribe_any_file_type, save_uploaded_file, \
+    create_new_list_to_add_to_airtable, move_file_to_repo
 from mail_out import send_email
 
 # Initialize session state variables if they don't exist
@@ -12,6 +13,9 @@ if 'button_pressed' not in st.session_state:
 
 if 'button_2_pressed' not in st.session_state:
     st.session_state.button_2_pressed = False
+
+if 'button_3_pressed' not in st.session_state:
+    st.session_state.button_3_pressed = False
 
 # Sidebar button to trigger the rest of the form
 if st.sidebar.button("Nowa lekcja"):
@@ -54,11 +58,11 @@ try:  # uploading the files
         uploaded_file = st.sidebar.file_uploader("Wrzuć plik", type=['mov', 'mp4', 'wav', 'mp3', 'txt', 'pdf'])
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
         text = transcribe_any_file_type(file_path)  # check file type and convert to mp3
-        list_of_words=create_new_list_to_add_to_airtable(text,'')
-        
-        for word in list_of_words:
+        list_of_words = create_new_list_to_add_to_airtable(text, '')
 
-            st.write(word,'\r')
+        for word in list_of_words:
+            word = word.strip('?!:;,.„"''')
+            st.write(word, '\r')
 
 
 

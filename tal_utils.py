@@ -393,12 +393,17 @@ def save_new_word_to_airtable(tuple_4at):
 def create_new_list_to_add_to_airtable(added_text, base_text):
     added_text = added_text.split()
 
+    added_text = [word.replace("'s","") for word in added_text]
+    chars_to_remove = r'[\'"”1234567890!@#$%^&*()_+§~`<>?|\/.,]'
     # Clean old_text by removing punctuation and converting to lowercase
-    old_text_cleaned = [word.strip(".,!?").lower() for word in added_text]
+    added_text = [re.sub(chars_to_remove,"",word.lower()) for word in added_text]
 
     # Assuming new_text is a list of words you want to exclude
     # and it's already cleaned and in the correct format
-    new_words = [word for word in old_text_cleaned if word not in base_text]
+    new_words = [word for word in added_text if word not in base_text]
+
+
+
 
     # Select unique words to avoid duplicates
     unique_words = list(set(new_words))

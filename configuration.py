@@ -37,6 +37,7 @@ airtable_token = _config["Airtable"]["airtable_token"]
 base_id = _config["Airtable"]["base_id"]
 table_id = _config["Airtable"]["table_id"]
 table_id2 = _config["Airtable"]["table_id2"]
+table_dictionary = _config["Airtable"]["table_dictionary"]
 
 aws_access_key_id = _config["AWS"]["aws_access_key_id"]
 aws_secret_access_key = _config["AWS"]["aws_secret_access_key"]

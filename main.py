@@ -4,7 +4,7 @@ import streamlit as st
 from tal_interface import get_lesson_data  # Import the UI setup function
 from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
     download_last_recording, transcribe_local, transcribe_any_file_type, save_uploaded_file, \
-    create_new_list_to_add_to_airtable, move_file_to_repo
+    create_new_list_to_add_to_airtable, move_file_to_repo, translate_new_list
 from mail_out import send_email
 
 # Initialize session state variables if they don't exist
@@ -57,12 +57,10 @@ try:  # uploading the files
     if st.session_state.button_3_pressed:
         uploaded_file = st.sidebar.file_uploader("Wrzuć plik", type=['mov', 'mp4', 'wav', 'mp3', 'txt', 'pdf'])
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
-        text = transcribe_any_file_type(file_path)  # check file type and convert to mp3
-        list_of_words = create_new_list_to_add_to_airtable(text, '')
+        text = transcribe_any_file_type(file_path)  # check file type and convert to mp3 if needed and return transcribed text
 
-        for word in list_of_words:
-            word = word.strip('?!:;,.„"''')
-            st.write(word, '\r')
+        result_text= translate_new_list(text)
+        st.write(result_text)
 
 
 

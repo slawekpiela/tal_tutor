@@ -41,6 +41,7 @@ def query_model(prompt, instructions, assistant, thread_id):
                 thread_id=thread_id,
                 run_id=run.id)
          status = result.status
+         print(status)
          time.sleep(1)
 
 

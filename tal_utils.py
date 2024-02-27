@@ -1,15 +1,9 @@
-import requests
-import json
-import magic
+import requests, json, magic, fitz, os, whisper, shutil, subprocess, re
 import streamlit as st
-import fitz
-from configuration import whereby_api_key, tiny_api_key
-import whisper
-import re
+from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3
 from moviepy.editor import VideoFileClip
-import os, shutil
 from datetime import timedelta, datetime
-import subprocess
+from query_openai import query_model
 
 import imageio_ffmpeg
 import mimetypes
@@ -133,13 +127,12 @@ def transcribe_local(file):
 
 def transcribe_any_file_type(file_path):
     file_type = magic.from_file(file_path, mime=True)
-    st.write('Checking file type:')
     old_file_path = file_path
 
     if file_type.startswith('audio'):
         st.write('Audio file detected')
         file_path = check_and_convert_to_mp3(file_path)  # make sure mp3 is saved for transcription
-        trnsc_txt = transcribe_local(file_path)  # get transcription
+        trnsc_txt = f'{transcribe_local(file_path)}.'  # get transcription and add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
         move_file_to_repo(file_path)  # cleanup
         if old_file_path != file_path:
@@ -150,7 +143,7 @@ def transcribe_any_file_type(file_path):
     elif file_type.startswith('video'):
         st.write('Video file detected')
         file_path = extract_audio(file_path)  # extract and save mp3 file
-        trnsc_txt = transcribe_local(file_path)
+        trnsc_txt = f'{transcribe_local(file_path)}.'  # get transcription and add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
         move_file_to_repo(file_path)  # cleanup
         if old_file_path != file_path:
@@ -159,8 +152,9 @@ def transcribe_any_file_type(file_path):
         return trnsc_txt  # return transcribed text
 
     elif file_type == 'application/pdf':
-        st.write('PDF file detected', file_path)
+        st.write('PDF file detected')
         trnsc_txt, text_file_name = convert_pdf_to_txt(file_path)
+        trnsc_txt = f'{trnsc_txt}.'  # add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
         move_file_to_repo(file_path)  # cleanup
         if old_file_path != file_path:
@@ -172,7 +166,7 @@ def transcribe_any_file_type(file_path):
 
         st.write('Text file detected')
         with open(file_path, 'r') as file:
-            trnsc_txt = file.read()
+            trnsc_txt = f'{file.read()}.'  # dad dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
         move_file_to_repo(file_path)  # cleanup
         if old_file_path != file_path:
@@ -354,18 +348,14 @@ def get_airtable_list():
     return
 
 
+def save_new_words_to_airtable(tuple_4at):
+    air_token = airtable_token
+    table_name = table_dictionary
 
-
-
-def save_new_word_to_airtable(tuple_4at):
-    api_key = 'YOUR_AIRTABLE_API_KEY'
-    base_id = 'YOUR_AIRTABLE_BASE_ID'
-    table_name = 'YOUR_AIRTABLE_TABLE_NAME'
-
-    endpoint = f'https://api.airtable.com/v0/{base_id}/{table_name}'
+    endpoint = f'https://api.airtable.com/v0/{air_token}/{table_name}'
 
     headers = {
-        'Authorization': f'Bearer {api_key}',
+        'Authorization': f'Bearer {air_token}',
         'Content-Type': 'application/json'
     }
 
@@ -374,7 +364,12 @@ def save_new_word_to_airtable(tuple_4at):
             'Word': tuple_4at[0],
             'Translation': tuple_4at[1],
             'Translation_Extended': tuple_4at[2],
-            'Transcript': tuple_4at[3]
+            'Transcript': tuple_4at[3],
+            'Study_status': tuple_4at[4],
+            'Study_status_string': tuple_4at[5],
+            'Insert_date_time': tuple_4at[6],
+            'user': tuple_4at[7]
+
         }
     }
 
@@ -391,21 +386,55 @@ def save_new_word_to_airtable(tuple_4at):
 # save_new_word_to_airtable(data)
 
 def create_new_list_to_add_to_airtable(added_text, base_text):
+    # pull base_text from air table
+    # split text into 30 word sets
+    # save each set in dataframe
+    # run throught below code to create lists where first item is context rest are uniqe words.
+    # after each is created translate it.
+
     added_text = added_text.split()
 
-    added_text = [word.replace("'s","") for word in added_text]
+    added_text = [word.replace("'s", "") for word in added_text]
     chars_to_remove = r'[\'"”1234567890!@#$%^&*()_+§~`<>?|\/.,]'
     # Clean old_text by removing punctuation and converting to lowercase
-    added_text = [re.sub(chars_to_remove,"",word.lower()) for word in added_text]
+    added_text = [re.sub(chars_to_remove, "", word.lower()) for word in added_text]
 
     # Assuming new_text is a list of words you want to exclude
     # and it's already cleaned and in the correct format
     new_words = [word for word in added_text if word not in base_text]
 
-
-
-
-    # Select unique words to avoid duplicates
+    # returns list of words so far not present in the table (base text)
     unique_words = list(set(new_words))
 
     return unique_words
+
+
+def translate_new_list(transcbd_text):
+    sentences = parse_text_to_sentences(transcbd_text)
+    st.write("ilosc slow: ", len(create_new_list_to_add_to_airtable(transcbd_text,'')))
+    st.write('context:', transcbd_text)
+    st.write("ilość zdan: ", len(sentences))
+
+    list_s = []
+    for sentence in sentences:
+        # Process each sentence for translation
+
+        prompt = f'Take this text: {sentence}. List all unique words like this:  the  word - phonetic transcription - translation to Polish. Do not duplicate the list.'
+        language = 'Polish'
+        instruction = f"You are a translator. You translate into {language} language. Always translate all the words. every translation in separate line. Always use format for output: consecutive number - translated english  word - phonetic transcription - translation."
+        result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
+
+        list_s.append(result_text)
+
+    return result_text
+
+
+def parse_text_to_sentences(text):
+    sentences = []
+    sentence = ''
+    for word in text:
+        sentence += word
+        if word.endswith('.') or word.endswith(' .'):
+            sentences.append(sentence)
+            sentence = ''
+    return sentences

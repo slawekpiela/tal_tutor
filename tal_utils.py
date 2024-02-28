@@ -1,11 +1,13 @@
 import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, deepl, nltk
+import pandas as pd
 import streamlit as st
-from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3, api_deepl, base_id
+from configuration import whereby_api_key, tiny_api_key, assistant_id3, api_deepl
 from moviepy.editor import VideoFileClip
 from datetime import timedelta, datetime
 from query_openai import query_model
 from airtable import Airtable
-
+from configuration import base_id, table_dictionary, airtable_token
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 import imageio_ffmpeg
 import mimetypes
@@ -72,24 +74,6 @@ def shorten_url(url):
     tinyurl = (jsonblob['data']['tiny_url'])
     fullurl = (jsonblob['data']['url'])
 
-    # import requests
-    # from configuration import tiny_api_key
-    #
-    # api_url = 'http://tinyurl.com/api-create.php?url='
-    # # headers = {
-    # #     "Authorization": f"Bearer {tiny_api_key}",
-    # #     "Content-Type": "application/json",
-    # # }
-    # # data = {
-    # #     #"url": 'jakistam.ur.pl/osododododod',
-    # #     "domain": "tinyurl.com",
-    # #     "alias": "myexamplelink",
-    # #     "tags": "example,link",
-    # #     "expires_at": "2024-10-25 10:11:12",
-    # #     "description": "string"
-    # # }
-    # response = requests.get(api_url+'www.komes.com.pl')
-    # print(response.text)
     return tinyurl
 
 
@@ -346,82 +330,40 @@ def get_last_recording_id():  # whereby last recording ID
         return "error"
 
 
-def remove_words_already_on_airtable(json_with_all_words):
-    airtable = Airtable(base_id, table_dictionary, airtable_token)
-
-    # Fetch all records from Airtable
-    airtable_records = airtable.get_all()
-
-    airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
-                         'keyword' in record['fields']]
-    # Your JSON data
-    json_data =json_with_all_words
-
-    # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
-    filtered_json_data = [item for item in json_data if item['keyword'] not in airtable_keywords]
-
-    print(filtered_json_data)
-
-    return json_data
-
-
-def save_new_words_to_airtable(tuple_4at):
-    air_token = airtable_token
-    table_name = table_dictionary
-
-    endpoint = f'https://api.airtable.com/v0/{air_token}/{table_name}'
-
-    headers = {
-        'Authorization': f'Bearer {air_token}',
-        'Content-Type': 'application/json'
-    }
-
-    payload = {
-        'fields': {
-            'Word': tuple_4at[0],
-            'Translation': tuple_4at[1],
-            'Translation_Extended': tuple_4at[2],
-            'Transcript': tuple_4at[3],
-            'Study_status': tuple_4at[4],
-            'Study_status_string': tuple_4at[5],
-            'Insert_date_time': tuple_4at[6],
-            'user': tuple_4at[7]
-
-        }
-    }
-
-    response = requests.post(endpoint, headers=headers, json=payload)
-
-    if response.status_code == 200:
-        print('Word saved successfully to Airtable!')
-    else:
-        print(f'Error saving word to Airtable: {response.status_code} - {response.text}')
+# def remove_words_already_on_airtable(json_with_all_words):
+#     airtable = Airtable(base_id, table_dictionary, airtable_token)
+#
+#     # Fetch all records from Airtable
+#     airtable_records = airtable.get_all()
+#
+#     airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
+#                          'keyword' in record['fields']]
+#     # Your JSON data
+#     json_data = json_with_all_words
+#
+#     # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
+#     filtered_json_data = [item for item in json_data if item['keyword'] not in airtable_keywords]
+#
+#     print(filtered_json_data)
+#
+#     return json_data
 
 
-# # Example usage
-# data = ('apple', 'Translation of apple', 'Extended translation of apple', 'Transcript of apple')
-# save_new_word_to_airtable(data)
+def save_new_words_to_airtable(my_json):
+    my_json_str = my_json
+    my_json = json.loads(my_json_str)
 
-def create_new_list_to_add_to_airtable(added_text, base_text):
-    added_text = added_text.split()
 
-    added_text = [word.replace("'s", "") for word in added_text]
-    chars_to_remove = r'[\'"”1234567890!@#$%^&*()_+§~`<>?|\/.,]'
-    # Clean old_text by removing punctuation and converting to lowercase
-    added_text = [re.sub(chars_to_remove, "", word.lower()) for word in added_text]
+    a = Airtable(base_id, table_dictionary, airtable_token)
+    for record in my_json:
+        a.insert(record)
+    return
 
-    # Assuming new_text is a list of words you want to exclude
-    # and it's already cleaned and in the correct format
-    new_words = [word for word in added_text if word not in base_text]
 
-    # returns list of words so far not present in the table (base text)
-    unique_words = list(set(new_words))
 
-    return unique_words
 
 
 def translate_new_list(transcbd_text):
-
     transcbd_text = transcbd_text.lower()
 
     sentences = parse_text_to_sentences(transcbd_text)
@@ -434,7 +376,7 @@ def translate_new_list(transcbd_text):
         # Process each sentence for translation
         lang_code = deepl_translate(sentence, 'pl')
         lang_code = lang_code[0]
-        #st.write('to be translated:', lang_code, '  ', sentence)
+        # st.write('to be translated:', lang_code, '  ', sentence)
 
         if lang_code == 'en' and len(sentence) > 3:
 
@@ -442,7 +384,7 @@ def translate_new_list(transcbd_text):
             language = 'Polish'
             instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the  unique word - phonetic transcription - translation to Polish. Do not duplicate the list."
             result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
-            #st.write('list of worde of sentence:', result_text)
+            # st.write('list of worde of sentence:', result_text)
             list_s.append(result_text)
         else:
             pass
@@ -498,59 +440,95 @@ def deepl_translate(source_text, target_lang):
     translation = result.text
     return lang_code, translation
 
+
 def create_json_from_list(text):
-    text = ''.join(text)
-    original_set = text
-    json_list = []
-    items = text.split('\n')
+    from airtable import Airtable
 
-    #Iterate through the original set and perform substitutions
-    for item in items:
-        parts = item.split(' - ')
-        if len(parts) == 3:
-            json_item = {
-                'keyword': parts[0],
-                'transcript': parts[1],
-                'translation': parts[2]
+    text = ' '.join(text)  # make it a string
 
-            }
-            json_list.append(json_item)
+    entries = []
+    # Split the string into individual phrases
+    phrases = text.split(", ")
+    for phrase in phrases:
+        # Further split each phrase by lines if necessary
+        lines = phrase.split('\n')
+        for line in lines:
+            # Split each line into keyword, transcription, and translation
+            parts = line.split(" - ")
+            if len(parts) == 3:
+                entry = {
+                    "keyword": parts[0].strip("'"),
+                    "transcription": parts[1],
+                    "translation": parts[2],
+                    "study_status": '---',
+                    "user": 'slawek',
+                    "no_of_tries": 0,
+                    "group":''
 
-    # Convert the list of dictionaries to a JSON string with ensure_ascii=False
-    json_string = json.dumps(json_list, ensure_ascii=False)
+                }
+                entries.append(entry)
 
-    json_list = json.loads(json_string)
+    airtable_records = get_from_airtable()  # Pull data from Airtable
 
-    num_items = len(json_list)
-    #st.write(num_items)
+    # Extract keywords from Airtable records
+    airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
+                         'keyword' in record['fields']]
 
+    # Filter entries to include those not in Airtable already
+    new_entries = [entry for entry in entries if entry['keyword'] not in airtable_keywords]
 
+    # Now, convert the filtered entries into a JSON string not list!!! It will have to be converted if to be used as list.
 
-    # now remove duplicates
+    json_string = json.dumps(new_entries, indent=4, ensure_ascii=False)
 
-    unique_to_translate = set()
-
-    # List to store filtered entries
-    filtered_json_list = []
-
-    # Iterate through the original list of dictionaries
-    for entry in json_list:
-        # Check if the 'to_translate' value is unique
-        if entry['to_translate'] not in unique_to_translate:
-            # If unique, add it to the set and append the entry to the filtered list
-            unique_to_translate.add(entry['to_translate'])
-            filtered_json_list.append(entry)
-
-    # Convert the filtered list of dictionaries to a JSON string with ensure_ascii=False
-    json_string = json.dumps(filtered_json_list, ensure_ascii=False)
-    json_list = json.loads(json_string)
-
-    num_items = len(json_list)
-    #st.write('json b4 airtable removal:', json_string)
-    #remove words already on airtable
-    #json_string= remove_words_already_on_airtable(json_string)
-
-    #st.write("Number of new word on the list:", num_items)
-
-    #st.write(json_string)
     return json_string
+
+
+def get_from_airtable():
+    a = Airtable(base_id, table_dictionary, airtable_token)
+
+    airtable_records = a.get_all()
+
+    return airtable_records
+
+
+def display_json_in_a_grid(my_json):
+    df = pd.read_json(my_json)
+    AgGrid(df)  # d isplay new wods in a gridw_words_to_airtable(my_json)
+
+    # dataframe = pd.read_json(my_json)
+    # # Now pass the DataFrame instead of the list
+    # gb = GridOptionsBuilder.from_dataframe(dataframe)
+    # gb.configure_grid_options(domLayout='normal')
+    # gb.configure_column("Keyword", editable=True)  # Make the name column non-editable
+    # gb.gb.configure_column("Transcription", editable=True)  # Make the quantity column editable
+    # gb.gb.configure_column("Translation", editable=True)  # Make the quantity column editable
+    #
+    # # Continue as before
+    # grid_options = gb.build()
+    #
+    # # Display the grid
+    # grid_response = AgGrid(
+    #     dataframe,
+    #     gridOptions=grid_options,
+    #     update_mode=GridUpdateMode.MODEL_CHANGED,  # Update mode to capture changes
+    #     fit_columns_on_grid_load=True,
+    # )
+    #
+    # # Get updated data
+    # updated_data = grid_response['data']
+    return
+
+# def select_only_new(added_text):
+#     st.write('select_only_nooew- start')
+#     at= get_from_airtable()
+#     st.write('select_only_new- end ',at)
+#
+#     airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
+#                          'keyword' in record['fields']]
+#
+#     # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
+#     unique_words = [item for item in added_text if item['keyword'] not in airtable_keywords]
+#     unique_words = json.dumps(unique_words)
+#
+#     return unique_words

@@ -8,5 +8,7 @@ PyMuPDF
 wikipedia-api
 deepl
 nltk
+airtable-python-wrapper
+
 
 

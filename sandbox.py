@@ -1,48 +1,28 @@
-import json
-text={'change - tʃeɪndʒ - zmiana\nfloor - flɔr - podłoga\nencourage - ɪnˈkɜrɪdʒ - zachęcać\nkid - kɪd - dziecko\nenter - ˈɛntər - wchodzić\nscene - sin - scena\nchronicle - ˈkrɒnɪkl - kronika\nyoung - jʌŋ - młody\nSatan - ˈseɪtən - szatan', 'upon - əˈpɒn - na\nseeing - ˈsiːɪŋ - widzenie\nthe - ðə - \nfrog - frɒɡ - żaba\nboys - bɔɪz - chłopcy\nhad - hæd - miał\ncaught - kɔːt - złapany\noutside - ˌaʊtˈsaɪd - na zewnątrz\nof - əv - z\ntown - taʊn - miasto\ntwain - tweɪn - dwójka\nrelates - rɪˈleɪts - opowiada\nhis - hɪz - jego\nfirst - fɜːst - pierwszy\npopular - ˈpɒpjʊlər - popularny\nshort - ʃɔːt - krótki\nstory - ˈstɔːri - opowieść\ncelebrated - ˈselɪbreɪtɪd - znany\njumping - ˈdʒʌmpɪŋ - skaczący\ncalaveras - ˌkæləˈvɪərəs - Calaveras\ncounty - ˈkaʊnti - hrabstwo', 'mark - /mɑːrk/ - znamię\ntwain - /tweɪn/ - dwoje\nemerges - /ɪˈmɜːrdʒɪz/ - pojawia się\nfrom - /frʌm/ - z\nthe - /ðə/ - (określony rodzajnik)\nopen - /ˈoʊpən/ - otwarty\nvoid - /vɔɪd/ - pustka\nnow - /naʊ/ - teraz\ndressed - /drest/ - ubrany\nin - /ɪn/ - w\na - /ə/ - (nieokreślony rodzajnik)\nblack - /blæk/ - czarny\nsuit - /suːt/ - garnitur\ninstead - /ɪnˈstɛd/ - zamiast\nof - /ʌv/ - z\nhis - /hɪz/ - jego\nusual - /ˈjuːʒuəl/ - zwykły\nwhite - /waɪt/ - biały\none - /wʌn/ - jeden', 'the - ðə - the\nstory - ˈstɔːri - historia\ncomes - kʌmz - przychodzi\nto - tuː - do\na - ə - jeden\nhalt - hɔːlt - zatrzymać\nwhen - ˈwen - kiedy\nreal - ˈriːəl - prawdziwy\nstorm - stɔːrm - burza\nsurrounds - səˈraʊndz - otacza\nairship - ˈeərʃɪp - sterowiec\njust - dʒʌst - tylko\nas - æz - gdy\nclouds - klaʊdz - chmury\nfill - fɪl - wypełnić\ngarden - ˈɡɑːrdn̩ - ogród\nof - əv - z\neden - ˈiːdn̩ - raj', 'they - ðeɪ - oni\nstumble - ˈstʌmbəl - potykać się\nupon - əˈpɒn - na\nthe - ðə - (określony rodzajnik)\nindex-o-vator - ˈɪndeks-əʊ-veɪtər - indeks,o-winda\na - ə - (nieokreślony rodzajnik)\nstrange - streɪndʒ - dziwny\nelevator - ˈɛlɪveɪtər - winda\nthat - ðæt - który\ncan - kæn - móc\ntake - teɪk - zabrać\nthem - ðem - ich\nto - tə - do\nany - ˈɛni - jakikolwiek\npart - pɑːt - część\nof - əv - z\nvessel - ˈvɛsəl - statek\nor - ɔːr - lub\ninto - ˈɪntuː - do\nwriting - ˈraɪtɪŋ - pisanie', "explains - ɪkˈspleɪnz - tłumaczyć\nhis - hɪz - jego\nplan - plæn - plan\nto - tuː - do\nhuck - hʌk - chłopiec\nand - ænd - i\nbecky - ˈbɛki - Beca\nthey - ðeɪ - oni\nconspire - kənˈspaɪər - spiskować\nsabotage - ˈsæbətɑʒ - sabotaż\ntwain's - tweɪnz - Mark Twain\nsuicidal - ˌsuːɪˈsaɪdl - samobójczy\nvoyage - ˈvɔɪɪdʒ - podróż\ntake - teɪk - wziąć\ncontrol - kənˈtroʊl - kontrola\nof - ʌv - z\nthe - ðiː - \nairship - ˈɛrˌʃɪp - sterowiec", 'they - ðeɪ - oni\nlie - laɪ - kłamstwo\nlow - loʊ - niski\nas - əz - jak\ntwain - tweɪn - dwoje\nteaches - ˈtiːtʃɪz - uczy\nthem - ðɛm - ich\nhow - haʊ - jak\nto - tu - aby\nfly - flaɪ - latać\nthe - ðə - ten\nvessel - ˈvɛsəl - statek\nand - ænd - i\ntom - tɒm - Tom\nsenses - ˈsɛnsɪz - zmysły\nan - ˈæn - jeden\nopportunity - ˌɑpərˈtuːnəti - okazja\nin - ɪn - w\nthe - ðə - ten\ncentral - ˈsɛntrəl - centralny\npower - ˈpaʊər - energia\npanel - ˈpænəl - panel', 'after - /ˈɑːftər/ - po\na - /ə/ - jedna\nbout - /baʊt/ - atak\nof - /əv/ - z\none-upmanship - /ˌwʌnˈʌpmənʃɪp/ - wywyższanie się\nbecky - /ˈbɛki/ - Becky\nthatcher - /ˈθætʃər/ - Thatcher\nfollows - /ˈfɒləʊz/ - następuje\nthem - /ðəm/ - ich\nto - /tuː/ - do\ncall - /kɔːl/ - nazwać\ntheir - /ðɛː/ - ich\nbluff - /blʌf/ - blef', 'using - ˈjuːzɪŋ - używając\nit - ɪt - to\nthey - ðeɪ - oni\nmeet - miːt - spotykać\nup - ʌp - w górę\nwith - wɪð - z\ntwain - tweɪn - para, dwójka\nand - ænd - i\nbecky - ˈbɛki - Beeki\nwho - huː - który\nis - ɪz - jest\nintrigued - ɪnˈtriːɡd - zaintrygowany\nby - baɪ - przez\na - ə - jeden\ncoin-operated - kɔɪnˈɒpəreɪtɪd - na monety\nautomaton - ɔːˈtɒmətɒn - automat\nof - əv - z\nadam - ˈædəm - Adam\neve - iːv - Ewa', 'the - ðə - pronoun - the\nballoon - bəˈluːn - noun - balon\ntakes - teɪks - verb - zabiera\noff - ɒf - adverb - startować\nand - ənd - conjunction - i\nstowaways - ˈstəʊəweɪz - noun - pasażerowie ukrywający się na pokładzie\nare - ər - verb - są\nsoon - suːn - adverb - niedługo\ndiscovered - dɪˈskʌvəd - verb - odkryte\nbut - bʌt - conjunction - ale\nthey - ðeɪ - pronoun - oni\nsurprised - səˈpraɪzd - adjective - zaskoczony\nto - tə - preposition - do\nlearn - lɜːn - verb - uczyć się\nthat - ðæt - conjunction - że\ntwain - tweɪn - noun - dwójka\nalready - ɔːlˈrɛdi - adverb - już\nknows - noʊz - verb - wie\ntheir - ðɛr - pronoun - ich\nnames - neɪmz - noun - imiona', "the - ðə - \nkids - kɪdz - dzieci\nask - æsk - pytać\nif - ɪf - jeśli\nthere - ðɛər - tam\nis - ɪz - jest\nanother - əˈnʌðər - inny\nlife - laɪf - życie\nwaiting - ˈweɪtɪŋ - czekanie\nfor - fɔːr - dla\nthem - ðəm - dla nich\nafter - ˈæftər - po\nthey - ðeɪ - oni\ncollide - kəˈlaɪd - zderzać się\nwith - wɪð - z\nthe - ðə - \ncomet - ˈkɒmɪt - kometa\nand - ænd - i\ntwain - tweɪn - dwaj\nrelates - rɪˈleɪts - opowiada\nstory - ˈstɔːri - opowieść\nof - əv - z\ncaptain - ˈkæptɪn - kapitan\nstormfield's - ˈstɔːmfildz - Stormfield's\nvisit - ˈvɪzɪt - wizyta\nto - tuː - do\nheaven - ˈhɛvən - niebo", 'twain - tweɪn - dwójka\nquickly - ˈkwɪkli - szybko\ncoaches - ˈkoʊtʃɪz - trenuje\nthe - ðə - \nkids - kɪdz - dzieci\non - ɒn - na\nhow - haʊ - jak\nto - tuː - aby\npilot - ˈpaɪlət - pilotować\nship - ʃɪp - statek\nbut - bʌt - ale\nthey - ðeɪ - oni\nfail - feɪl - zawodzić\nto - tuː - aby\navoid - əˈvɔɪd - uniknąć\nsmashing - ˈsmæʃɪŋ - miażdżenie\ninto - ˈɪntuː - w\na - ə - \nmountain - ˈmaʊntən - góra\nand - ænd - i\nlosing - ˈluːzɪŋ - tracenie\na - ə - \nchunk - tʃʌŋk - kawał\nof - əv - z\nthe - ðə - hull - hʌl - kadłub', 'disheartened - /dɪsˈhɑːrtənd/ - zniechęcony\nindex-o-vator - /ˈɪndeks-əˌveɪtər/ - index-o-winda\nadventures - /ədˈvɛnʧərz/ - przygody', "huck - /hʌk/ - Huck\nand - /ænd/ - i\nbecky - /ˈbɛki/ - Becky\nare - /ɑr/ - są\nexcited - /ɪkˈsaɪtɪd/ - podekscytowany\nat - /ət/ - w\nthe - /ðə/ - (określa coś)\nopportunity - /ˌɒpəˈtjuːnəti/ - okazja\nto - /tuː/ - do\nreturn - /rɪˈtɜrn/ - wrócić\nhome - /həʊm/ - do domu\nbut - /bʌt/ - ale\ntom - /tɒm/ - Tom\nonly - /ˈoʊnli/ - tylko\ncares - /kɛrz/ - troszczy się\nabout - /əˈbaʊt/ - o\navoiding - /əˈvɔɪdɪŋ/ - unikanie\naunt - /ɔːnt/ - ciocia\nbetty's - /ˈbɛti/ - Betty\nchores - /tʃɔrz/ - obowiązki\nand - /ænd/ - i\nchanges - /ˈtʃeɪndʒɪz/ - zmiany\nthe - /ðə/ - (określa coś)\nfloor - /flɔr/ - podłoga\nbefore - /bɪˈfɔr/ - zanim\nothers - /ˈʌðərz/ - inni\ncan - /kæn/ - mogą\nprotest - /prəˈtɛst/ - protestować", 'huckleberry - /ˈhʌklˌbɛri/ - jeżyna\nfinn - /fɪn/ - skrzynka\nand - /ænd/ - i\ntom - /tɒm/ - Tom\nsawyer - /ˈsɔɪər/ - Dziwak\nsneak - /sniːk/ - skradać się\naboard - /əˈbɔrd/ - na pokładzie\nan - /ən/ - jeden\nairship - /ˈɛrˌʃɪp/ - sterowiec\npiloted - /ˈpaɪlətɪd/ - pilotowany\nby - /baɪ/ - przez\nmark - /mɑrk/ - znak\ntwain - /tweɪn/ - dwa\nin - /ɪn/ - w\ntheir - /ðɛr/ - ich\ndreams - /drimz/ - marzenia\nof - /ʌv/ - z\nbecoming - /bɪˈkʌmɪŋ/ - stawanie się\nfamous - /ˈfeɪməs/ - sławny\naeronauts - /ˈɛrəˌnɔts/ - aeronauci', 'they - ðeɪ - oni\nfollow - ˈfɒləʊ - podążać\ntwain - tweɪn - dwa\ninto - ˈɪntuː - do\nhis - hɪz - jego\noffice - ˈɒfɪs - biuro\nto - tuː - aby\ntie - taɪ - zawiązać\nhim - hɪm - jego\nup - ʌp - w górę\nwhen - wen - kiedy\nhe - hiː - on\nfalls - fɔːlz - spada\nasleep - əˈsliːp - zasnąć\nbut - bʌt - ale\ntheir - ðer - ich\nsurprise - səˈpraɪz - zaskoczenie\ngreets - griːts - wita\nthem - ðem - ich\nagain - əˈɡen - znowu\non - ɒn - na\nthe - ðə - tę\ndeck - dek - pokład', 'twain - /tweɪn/ - Twain\ntakes - /teɪks/ - bierze\nthe - /ðə/ - \nchance - /tʃæns/ - szansa\nto - /tuː/ - \nbegin - /bɪˈɡɪn/ - zaczynać\ntelling - /ˈtɛlɪŋ/ - opowiadanie\nthem - /ðɛm/ - im\nstory - /ˈstɔːri/ - historia\nof - /ʌv, əv/ - z\nadam - /ˈædəm/ - Adam\nand - /ænd/ - i\neve - /iːv/ - Ewa\nbased - /beɪst/ - oparty\non - /ɒn, ɒf/ - na\nhis - /hɪz/ - jego\nstories - /ˈstɔːriz/ - opowieści\ndiary - /ˈdaɪəri/ - dziennik\nextracts - /ɪkˈstrækts/ - fragmenty\nfrom - /frʌm/ - z\n[END]', "the - ðə - (określa coś) \nboys - bɔɪz - chłopcy \nlearn - lɜrn - uczyć się \nthat - ðæt - że \ntwain - tweɪn - dwójka \nintends - ɪnˈtɛndz - zamierza \nto - tu - aby \npilot - ˈpaɪlət - pilotować \nthe - ðə - (określa coś) \nairship - ˈɛrʃɪp - sterowiec \nmeet - mit - spotkać \nhalley's - ˈhæliz - Halleya \ncomet - ˈkɒmɪt - kometa \nand - ənd - i \nare - ɑr - są \nworried - ˈwɜrid - zaniepokojeni \nthat - ðæt - że \nthis - ðɪs - to \ngoal - ɡoʊl - cel \nwill - wɪl - będzie \nend - end - zakończyć \nin - ɪn - w \ntheir - ðɛr - ich \ndeaths - dɛθs - śmierć"}
-text = ''.join(text)
-original_set = text
-json_list = []
-items = text.split('\n')
+from airtable import Airtable
+from configuration import base_id, table_dictionary, airtable_token
 
-# Iterate through the original set and perform substitutions
-for item in items:
-    parts = item.split(' - ')
-    if len(parts) == 3:
-        json_item = {
-            'to_translate': parts[0],
-            'transcript': parts[1],
-            'translation': parts[2]
-        }
-        json_list.append(json_item)
+airtable = Airtable(base_id, table_dictionary, airtable_token)
 
-# Convert the list of dictionaries to a JSON string with ensure_ascii=False
-json_string = json.dumps(json_list, ensure_ascii=False)
+# Fetch all records from Airtable
+airtable_records = airtable.get_all()
+# Provided Airtable records
+# airtable_records = [
+#     {'id': 'recXuY35LTgrIGeTF', 'createdTime': '2024-02-16T19:59:49.000Z', 'fields': {'UID': 1, 'create_date': '2024-02-16T19:59:49.000Z', 'keyword': 'hola', 'update_date': '2024-02-28T01:52:06.000Z'}},
+#     {'id': 'recaWgENm9yEjxloh', 'createdTime': '2024-02-16T19:59:49.000Z', 'fields': {'UID': 3, 'create_date': '2024-02-16T19:59:49.000Z'}},  # This record doesn't have a keyword field
+#     {'id': 'recj0WGlSJceOfHRC', 'createdTime': '2024-02-16T19:59:49.000Z', 'fields': {'UID': 2, 'create_date': '2024-02-16T19:59:49.000Z'}}
+# ]
 
-json_list = json.loads(json_string)
+# Extract keywords from Airtable records
+airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if 'keyword' in record['fields']]
 
-num_items = len(json_list)
-print(num_items)
-# now remove duplicates
+# Your JSON data
+json_data = [
+    {"keyword": "hello"},
+    {"keyword": "hola"},
+    {"keyword": "hellon"},
+]
 
-unique_to_translate = set()
+# Remove items from json_data that have a keyword matching any keyword in airtable_keywords
+filtered_json_data = [item for item in json_data if item['keyword'] not in airtable_keywords]
 
-# List to store filtered entries
-filtered_json_list = []
-
-# Iterate through the original list of dictionaries
-for entry in json_list:
-    # Check if the 'to_translate' value is unique
-    if entry['to_translate'] not in unique_to_translate:
-        # If unique, add it to the set and append the entry to the filtered list
-        unique_to_translate.add(entry['to_translate'])
-        filtered_json_list.append(entry)
-
-# Convert the filtered list of dictionaries to a JSON string with ensure_ascii=False
-json_string = json.dumps(filtered_json_list, ensure_ascii=False)
-json_list = json.loads(json_string)
-
-num_items = len(json_list)
-print(num_items)
-# now remove duplica
-print(json_string)
+print(filtered_json_data)

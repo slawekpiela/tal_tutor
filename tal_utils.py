@@ -1,9 +1,11 @@
 import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, deepl, nltk
 import streamlit as st
-from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3, api_deepl
+from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3, api_deepl, base_id
 from moviepy.editor import VideoFileClip
 from datetime import timedelta, datetime
 from query_openai import query_model
+from airtable import Airtable
+
 
 import imageio_ffmpeg
 import mimetypes
@@ -344,8 +346,23 @@ def get_last_recording_id():  # whereby last recording ID
         return "error"
 
 
-def get_airtable_list():
-    return
+def remove_words_already_on_airtable(json_with_all_words):
+    airtable = Airtable(base_id, table_dictionary, airtable_token)
+
+    # Fetch all records from Airtable
+    airtable_records = airtable.get_all()
+
+    airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
+                         'keyword' in record['fields']]
+    # Your JSON data
+    json_data =json_with_all_words
+
+    # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
+    filtered_json_data = [item for item in json_data if item['keyword'] not in airtable_keywords]
+
+    print(filtered_json_data)
+
+    return json_data
 
 
 def save_new_words_to_airtable(tuple_4at):
@@ -404,6 +421,7 @@ def create_new_list_to_add_to_airtable(added_text, base_text):
 
 
 def translate_new_list(transcbd_text):
+
     transcbd_text = transcbd_text.lower()
 
     sentences = parse_text_to_sentences(transcbd_text)
@@ -416,15 +434,15 @@ def translate_new_list(transcbd_text):
         # Process each sentence for translation
         lang_code = deepl_translate(sentence, 'pl')
         lang_code = lang_code[0]
-        st.write('to be translated:', lang_code, '  ', sentence)
+        #st.write('to be translated:', lang_code, '  ', sentence)
 
         if lang_code == 'en' and len(sentence) > 3:
 
             prompt = f'[START]{sentence}[END]'
             language = 'Polish'
-            instruction = f"List absolutely all unique words in text between [START] and [END]. Use this format: the  unique word - phonetic transcription - translation to Polish. Do not duplicate the list."
+            instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the  unique word - phonetic transcription - translation to Polish. Do not duplicate the list."
             result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
-            st.write('list of worde of sentence:', result_text)
+            #st.write('list of worde of sentence:', result_text)
             list_s.append(result_text)
         else:
             pass
@@ -486,14 +504,15 @@ def create_json_from_list(text):
     json_list = []
     items = text.split('\n')
 
-    # Iterate through the original set and perform substitutions
+    #Iterate through the original set and perform substitutions
     for item in items:
         parts = item.split(' - ')
         if len(parts) == 3:
             json_item = {
-                'to_translate': parts[0],
+                'keyword': parts[0],
                 'transcript': parts[1],
                 'translation': parts[2]
+
             }
             json_list.append(json_item)
 
@@ -503,7 +522,10 @@ def create_json_from_list(text):
     json_list = json.loads(json_string)
 
     num_items = len(json_list)
-    st.write(num_items)
+    #st.write(num_items)
+
+
+
     # now remove duplicates
 
     unique_to_translate = set()
@@ -524,8 +546,11 @@ def create_json_from_list(text):
     json_list = json.loads(json_string)
 
     num_items = len(json_list)
-    st.write(num_items)
-    # now remove duplica
-    print(json_string)
-    st.write(json_string)
+    #st.write('json b4 airtable removal:', json_string)
+    #remove words already on airtable
+    #json_string= remove_words_already_on_airtable(json_string)
+
+    #st.write("Number of new word on the list:", num_items)
+
+    #st.write(json_string)
     return json_string

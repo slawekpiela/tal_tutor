@@ -1,10 +1,10 @@
-# main.py
-import os, shutil
+from st_aggrid import AgGrid, GridOptionsBuilder
 import streamlit as st
 from tal_interface import get_lesson_data  # Import the UI setup function
 from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
     download_last_recording, transcribe_local, transcribe_any_file_type, save_uploaded_file, \
      move_file_to_repo, translate_new_list, create_json_from_list
+import pandas as pd
 
 
 # Initialize session state variables if they don't exist
@@ -58,13 +58,16 @@ try:  # uploading the files
         uploaded_file = st.sidebar.file_uploader("Wrzuć plik", type=['mov', 'mp4', 'wav', 'mp3', 'txt', 'pdf'])
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
         text = transcribe_any_file_type(file_path)  # check file type and convert to mp3 if needed and return transcribed text
-
+        st.write(text)
         result_text= translate_new_list(text)
 
-        create_json_from_list(result_text)
+        my_json=create_json_from_list(result_text) # create dataframe from json
+        df=pd.read_json(my_json)
 
-        st.write('from main:' , result_text)
-        print(result_text)
+
+        AgGrid(df)                          #d isplay new wods in a grid
+
+
 
 
 

@@ -1,6 +1,6 @@
-import requests, json, magic, fitz, os, whisper, shutil, subprocess, re
+import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, deepl, nltk
 import streamlit as st
-from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3
+from configuration import whereby_api_key, tiny_api_key, airtable_token, table_dictionary, assistant_id3, api_deepl
 from moviepy.editor import VideoFileClip
 from datetime import timedelta, datetime
 from query_openai import query_model
@@ -386,12 +386,6 @@ def save_new_words_to_airtable(tuple_4at):
 # save_new_word_to_airtable(data)
 
 def create_new_list_to_add_to_airtable(added_text, base_text):
-    # pull base_text from air table
-    # split text into 30 word sets
-    # save each set in dataframe
-    # run throught below code to create lists where first item is context rest are uniqe words.
-    # after each is created translate it.
-
     added_text = added_text.split()
 
     added_text = [word.replace("'s", "") for word in added_text]
@@ -410,31 +404,128 @@ def create_new_list_to_add_to_airtable(added_text, base_text):
 
 
 def translate_new_list(transcbd_text):
-    sentences = parse_text_to_sentences(transcbd_text)
-    st.write("ilosc slow: ", len(create_new_list_to_add_to_airtable(transcbd_text,'')))
-    st.write('context:', transcbd_text)
-    st.write("ilość zdan: ", len(sentences))
+    transcbd_text = transcbd_text.lower()
 
-    list_s = []
+    sentences = parse_text_to_sentences(transcbd_text)
+    # print("ilosc slow: ", len(create_new_list_to_add_to_airtable(transcbd_text, '')))
+    # print('context:', transcbd_text)
+    # print("ilość zdan: ", len(sentences))
+
+    list_s = []  # set guarantees adding only uniqe entries
     for sentence in sentences:
         # Process each sentence for translation
+        lang_code = deepl_translate(sentence, 'pl')
+        lang_code = lang_code[0]
+        st.write('to be translated:', lang_code, '  ', sentence)
 
-        prompt = f'Take this text: {sentence}. List all unique words like this:  the  word - phonetic transcription - translation to Polish. Do not duplicate the list.'
-        language = 'Polish'
-        instruction = f"You are a translator. You translate into {language} language. Always translate all the words. every translation in separate line. Always use format for output: consecutive number - translated english  word - phonetic transcription - translation."
-        result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
+        if lang_code == 'en' and len(sentence) > 3:
 
-        list_s.append(result_text)
+            prompt = f'[START]{sentence}[END]'
+            language = 'Polish'
+            instruction = f"List absolutely all unique words in text between [START] and [END]. Use this format: the  unique word - phonetic transcription - translation to Polish. Do not duplicate the list."
+            result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
+            st.write('list of worde of sentence:', result_text)
+            list_s.append(result_text)
+        else:
+            pass
+    # st.write('not english language.')
 
-    return result_text
+    list_s = set(list_s)
+    return list_s
 
 
 def parse_text_to_sentences(text):
-    sentences = []
-    sentence = ''
-    for word in text:
-        sentence += word
-        if word.endswith('.') or word.endswith(' .'):
-            sentences.append(sentence)
-            sentence = ''
-    return sentences
+    nltk.download('punkt')
+    tokenizer = nltk.tokenize.PunktSentenceTokenizer()
+    tokenizer._params.abbrev_types.add('languages')
+
+    return tokenizer.tokenize(text)
+
+
+def get_wikipedia_entry_in_language(title, language):
+    wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
+    page_py = wiki_wiki.page(title)
+
+    if not page_py.exists():
+        print("The page does not exist.")
+        return None
+
+    # Print the summary of the page in English
+    print("Summary (English):")
+    print(page_py.summary[0:1200])
+
+    # Now, find the same page in the requested language
+    if language in page_py.langlinks:
+        wiki_lang = wikipediaapi.Wikipedia(language=language, user_agent='slawek.piela@koios-mal.pl')
+        title_in_language = page_py.langlinks[language].title
+
+        page_in_lang = wiki_lang.page(page_py.langlinks[language].title)
+
+        print(f"\nTITLE: {title_in_language} it is:")
+        print(f"\nSummary ({language}):")
+
+        print(page_in_lang.summary[0:1000])
+    else:
+        print(f"No page found for language code: {language}")
+
+    # to call this function use:   get_wikipedia_entry_in_language(text, "pl") where PL is language we translate to.
+
+
+def deepl_translate(source_text, target_lang):
+    # source_text = 'This is sample text.'  # przeplatany różnymi językami. Merci boque. And English again'
+    translator = deepl.Translator(api_deepl)
+    result = translator.translate_text(source_text, target_lang=target_lang)
+
+    lang_code = result.detected_source_lang.lower()
+    translation = result.text
+    return lang_code, translation
+
+def create_json_from_list(text):
+    text = ''.join(text)
+    original_set = text
+    json_list = []
+    items = text.split('\n')
+
+    # Iterate through the original set and perform substitutions
+    for item in items:
+        parts = item.split(' - ')
+        if len(parts) == 3:
+            json_item = {
+                'to_translate': parts[0],
+                'transcript': parts[1],
+                'translation': parts[2]
+            }
+            json_list.append(json_item)
+
+    # Convert the list of dictionaries to a JSON string with ensure_ascii=False
+    json_string = json.dumps(json_list, ensure_ascii=False)
+
+    json_list = json.loads(json_string)
+
+    num_items = len(json_list)
+    st.write(num_items)
+    # now remove duplicates
+
+    unique_to_translate = set()
+
+    # List to store filtered entries
+    filtered_json_list = []
+
+    # Iterate through the original list of dictionaries
+    for entry in json_list:
+        # Check if the 'to_translate' value is unique
+        if entry['to_translate'] not in unique_to_translate:
+            # If unique, add it to the set and append the entry to the filtered list
+            unique_to_translate.add(entry['to_translate'])
+            filtered_json_list.append(entry)
+
+    # Convert the filtered list of dictionaries to a JSON string with ensure_ascii=False
+    json_string = json.dumps(filtered_json_list, ensure_ascii=False)
+    json_list = json.loads(json_string)
+
+    num_items = len(json_list)
+    st.write(num_items)
+    # now remove duplica
+    print(json_string)
+    st.write(json_string)
+    return json_string

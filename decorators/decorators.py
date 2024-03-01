@@ -4,7 +4,8 @@ def timing_decorator(func):
         start = time.time()
         result = func(*args, **kwargs)
         end = time.time()
-        print(f"{func.__name__} took {end - start} seconds to run.")
+        total_time = end - start
+        print(f"{func.__name__} took {total_time:.4f} seconds to run.")
         return result
 
     return wrapper

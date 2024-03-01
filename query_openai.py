@@ -1,6 +1,6 @@
 import time
 from openai import OpenAI
-from configuration import api_key, assistant_id, assistant_id3, assistant_id4, Models
+from configuration import api_key, assistant_id, assistant_id3, assistant_id4, Models, assistant_langforge
 import os
 
 #api-key=os.getenv("api-key")
@@ -26,7 +26,7 @@ def query_model(prompt, instructions, assistant, thread_id):
         # Create a run
         run = client.beta.threads.runs.create(
             thread_id=thread_id,
-            assistant_id=assistant,
+            assistant_id=assistant_langforge,
             instructions=instructions
             # tools=[{"type": "retrieval"}]  # Uncomment if needed
         )
@@ -41,7 +41,7 @@ def query_model(prompt, instructions, assistant, thread_id):
                 thread_id=thread_id,
                 run_id=run.id)
          status = result.status
-         print(f'\rstatus', end='')
+         print(f'\r',status, end='')
          time.sleep(1)
 
 

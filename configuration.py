@@ -27,7 +27,7 @@ api_key = _config["API"]["key"]
 assistant_id = _config["API"]["assistant_id"]
 assistant_id3 = _config["API"]["assistant_id3"]
 assistant_id4 = _config["API"]["assistant_id4"]
-
+assistant_langforge  =_config["API"]["assistant_langforge"]
 sender_passwords = _config["Mail"]["sender_passwords"]
 user_mail = _config["Mail"]["user_mail"]
 

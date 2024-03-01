@@ -11,8 +11,18 @@ from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 import imageio_ffmpeg
 import mimetypes
+from query_openai_no_assistant import query_no_assist
+def timing_decorator(func):
+    import time
+    def wrapper(*args, **kwargs):
+        start = time.time()
+        result = func(*args, **kwargs)
+        end = time.time()
+        total_time = end - start
+        print(f"{func.__name__} took {total_time:.4f} seconds to run.")
+        return result
 
-
+    return wrapper
 def save_uploaded_file(uploaded_file):
     data_dir = 'data'
     file_path = os.path.join(data_dir, uploaded_file.name)
@@ -352,55 +362,110 @@ def get_last_recording_id():  # whereby last recording ID
 def save_new_words_to_airtable(my_json):
     my_json_str = my_json
     my_json = json.loads(my_json_str)
+    print('something saved!!!!!!!!!!!!!!!!!!!!!!!!!!')
+    #
+    # a = Airtable(base_id, table_dictionary, airtable_token)
+    # for record in my_json:
+    #     print('saving: ',record)
+    #     a.insert(record)
+
+    # Set up Airtable API endpoint and headers
+    base_url = "https://api.airtable.com/v0"
+    base_id2 = base_id
+    table_name = table_dictionary
+    api_key = airtable_token
+    url = f"{base_url}/{base_id2}/{table_name}"
+    headers = {
+        "Authorization": f"Bearer {api_key}",
+        "Content-Type": "application/json"
+    }
+
+    # Example data (replace this with your actual data)
 
 
-    a = Airtable(base_id, table_dictionary, airtable_token)
-    for record in my_json:
-        a.insert(record)
+    # Upload data to Airtable
+    response = requests.post(url, json=my_json, headers=headers)
+
+    if response.status_code == 200:
+        print("Data uploaded successfully!")
+    else:
+        print(f"Error uploading data: {response.json()}")
+
+
     return
 
 
 
 
-
+@timing_decorator
 def translate_new_list(transcbd_text):
+
     transcbd_text = transcbd_text.lower()
 
     sentences = parse_text_to_sentences(transcbd_text)
-    # print("ilosc slow: ", len(create_new_list_to_add_to_airtable(transcbd_text, '')))
-    # print('context:', transcbd_text)
-    # print("ilość zdan: ", len(sentences))
+    print('num of sentences: ', len(sentences), 'sentences: ',sentences)
+    num_sentences = 3 # Assuming this is your desired grouping threshold
 
-    list_s = []  # set guarantees adding only uniqe entries
-    for sentence in sentences:
-        # Process each sentence for translation
-        lang_code = deepl_translate(sentence, 'pl')
-        lang_code = lang_code[0]
-        # st.write('to be translated:', lang_code, '  ', sentence)
+    list_s = []  # List to store results
+    sentence_group = []  # Temporary storage for accumulating sentences
+
+    for index, sentence in enumerate(sentences, start=1):
+        # Assume deepl_translate is a function that determines the language of the sentence
+        # and returns a language code, with 'en' for English.
+        lang_code = deepl_translate(sentence, 'pl')[0]
+        sentence=clean_up_text_to_ascii(sentence)
+        st.write('pyk')
 
         if lang_code == 'en' and len(sentence) > 3:
+            print(f"This is sentence number {index} :  {sentence}  sent len: {len(sentence)}")
+            sentence_group.append(sentence)
 
-            prompt = f'[START]{sentence}[END]'
-            language = 'Polish'
-            instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the  unique word - phonetic transcription - translation to Polish. Do not duplicate the list."
-            result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
-            # st.write('list of worde of sentence:', result_text)
-            list_s.append(result_text)
-        else:
-            pass
-    # st.write('not english language.')
+            # Process the group if it has reached the specified number of sentences
+            if len(sentence_group) >= num_sentences:
+                # Function to process the accumulated sentences
+                process_sentence_group(sentence_group, list_s)
+                sentence_group = []  # Reset for next group
 
-    list_s = set(list_s)
+    # After going through all sentences, check if there's an incomplete group left
+    if sentence_group:  # This will be True if sentence_group is not empty
+        process_sentence_group(sentence_group, list_s)
+
+    list_s = set(list_s)  # Convert list to set to ensure uniqueness
+
+
     return list_s
+@timing_decorator
+def process_sentence_group(sentence_group, list_s):
+    # Join the sentences for the prompt
+    print('translating: ' , len(sentence_group), ' ', sentence_group)
 
+    joined_sentences = ' '.join(sentence_group)
+    prompt = f'[START]{joined_sentences}[END]'
+    language = 'Polish'
+    instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the unique word - phonetic transcription - translation to {language} language. Do not duplicate the list. Here is the text: {prompt}"
+
+    # Assume query_model is a function that sends the prompt to a model and returns the translation
+    #result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
+
+    # query no assist:
+    result_text= query_no_assist(instruction)
+
+    list_s.append(result_text)
 
 def parse_text_to_sentences(text):
+    print('to be parsed:',text)
     nltk.download('punkt')
     tokenizer = nltk.tokenize.PunktSentenceTokenizer()
     tokenizer._params.abbrev_types.add('languages')
 
-    return tokenizer.tokenize(text)
+    parsed_text= tokenizer.tokenize(text)
 
+    return parsed_text
+
+def clean_up_text_to_ascii(ctext):
+    ctext= ctext.replace('\n', '')  # remove line break
+    ctext= ''.join( char for char in ctext if (60 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
+    return ctext
 
 def get_wikipedia_entry_in_language(title, language):
     wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
@@ -457,7 +522,7 @@ def create_json_from_list(text):
             parts = line.split(" - ")
             if len(parts) == 3:
                 entry = {
-                    "keyword": parts[0].strip("'"),
+                    "keyword": ''.join( char for char in parts[0].strip("'") if (60 <= ord(char) <= 122) or ord(char) == 32),
                     "transcription": parts[1],
                     "translation": parts[2],
                     "study_status": '---',
@@ -480,7 +545,9 @@ def create_json_from_list(text):
     # Now, convert the filtered entries into a JSON string not list!!! It will have to be converted if to be used as list.
 
     json_string = json.dumps(new_entries, indent=4, ensure_ascii=False)
-
+    json_tmp= json.loads(json_string)
+    if len(json_tmp)==0:
+            st.write('Nie wykryto nowych słowek')
     return json_string
 
 

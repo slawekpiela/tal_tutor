@@ -9,9 +9,9 @@ from airtable import Airtable
 from configuration import base_id, table_dictionary, airtable_token
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-import imageio_ffmpeg
-import mimetypes
 from query_openai_no_assistant import query_no_assist
+
+
 def timing_decorator(func):
     import time
     def wrapper(*args, **kwargs):
@@ -23,6 +23,8 @@ def timing_decorator(func):
         return result
 
     return wrapper
+
+
 def save_uploaded_file(uploaded_file):
     data_dir = 'data'
     file_path = os.path.join(data_dir, uploaded_file.name)
@@ -360,112 +362,104 @@ def get_last_recording_id():  # whereby last recording ID
 
 
 def save_new_words_to_airtable(my_json):
-    my_json_str = my_json
-    my_json = json.loads(my_json_str)
-    print('something saved!!!!!!!!!!!!!!!!!!!!!!!!!!')
-    #
-    # a = Airtable(base_id, table_dictionary, airtable_token)
-    # for record in my_json:
-    #     print('saving: ',record)
-    #     a.insert(record)
+    airtable = Airtable(base_id, table_dictionary, airtable_token)
+    st.write(my_json)
+    # Iterate through each record in the provided JSON data
+    for record in my_json['records']:
+        # Extract the 'fields' dictionary, which contains the actual data to be inserted
+        fields = record['fields']
 
-    # Set up Airtable API endpoint and headers
-    base_url = "https://api.airtable.com/v0"
-    base_id2 = base_id
-    table_name = table_dictionary
-    api_key = airtable_token
-    url = f"{base_url}/{base_id2}/{table_name}"
-    headers = {
-        "Authorization": f"Bearer {api_key}",
-        "Content-Type": "application/json"
-    }
-
-    # Example data (replace this with your actual data)
-
-
-    # Upload data to Airtable
-    response = requests.post(url, json=my_json, headers=headers)
-
-    if response.status_code == 200:
-        print("Data uploaded successfully!")
-    else:
-        print(f"Error uploading data: {response.json()}")
-
+        # Use the 'fields' dictionary directly when inserting into Airtable
+        response = airtable.insert(fields)
+        print(response)
 
     return
 
 
-
-
 @timing_decorator
-def translate_new_list(transcbd_text):
+def prepare_new_words_list(transcbd_text):
+    transcbd_text = transcbd_text.lower()  # na małe litery (obsługa wyjątkow pźniej będzie zrobiona (Moon , Sun Ietc)
+    sentences = parse_text_to_sentences(transcbd_text)  # rozbijamy na zdania
 
-    transcbd_text = transcbd_text.lower()
+    print('num of sentences: ', len(sentences), 'sentences: ', sentences)
 
-    sentences = parse_text_to_sentences(transcbd_text)
-    print('num of sentences: ', len(sentences), 'sentences: ',sentences)
-    num_sentences = 3 # Assuming this is your desired grouping threshold
+    # translate and place translation in list_s
+    translated_text = run_text_through_llm(sentences)
+    st.write('translated tex:',translated_text)
 
-    list_s = []  # List to store results
+    text_converted_to_json = convert_to_json(translated_text)
+    st.write('converte ', text_converted_to_json)
+    new_words_list =''# substract_airtable_from_translation(text_converted_to_json)
+
+    return new_words_list
+
+
+def run_text_through_llm(sentences):
+    list_s = ''  # list to store results
     sentence_group = []  # Temporary storage for accumulating sentences
+    sentences_batch_size = 3  # number of sentences that will be passed to LLM for translation
 
     for index, sentence in enumerate(sentences, start=1):
         # Assume deepl_translate is a function that determines the language of the sentence
         # and returns a language code, with 'en' for English.
-        lang_code = deepl_translate(sentence, 'pl')[0]
-        sentence=clean_up_text_to_ascii(sentence)
-        st.write('pyk')
+        lang_code = deepl_translate(sentence, 'pl')[0]  # determine the language.(we pass to llm only eEnglish)
+        sentence = clean_up_text_to_ascii(sentence)  # clen up to make sure onbly ascii chars are present
 
-        if lang_code == 'en' and len(sentence) > 3:
-            print(f"This is sentence number {index} :  {sentence}  sent len: {len(sentence)}")
-            sentence_group.append(sentence)
+        if lang_code == 'en' and len(sentence) > 3:  # ignore sentences shorter than 3 chars
+
+            print(f"This is sentence number {index} :  {sentence}  sentence len: {len(sentence)}")
+            sentence_group.append(sentence)  # append temporary storage
 
             # Process the group if it has reached the specified number of sentences
-            if len(sentence_group) >= num_sentences:
+            if len(sentence_group) >= sentences_batch_size:
                 # Function to process the accumulated sentences
-                process_sentence_group(sentence_group, list_s)
-                sentence_group = []  # Reset for next group
+                result_text=process_sentence_group(sentence_group, list_s)  # pass to LLM
+                list_s = list_s+result_text
+                sentence_group = []  # Reset for next group (rsult is placed in list_s variable
 
     # After going through all sentences, check if there's an incomplete group left
     if sentence_group:  # This will be True if sentence_group is not empty
-        process_sentence_group(sentence_group, list_s)
+        result_text= process_sentence_group(sentence_group, list_s)
+        list_s=list_s+result_text
 
-    list_s = set(list_s)  # Convert list to set to ensure uniqueness
-
+    st.write('final list_s', list_s)
 
     return list_s
+
+
 @timing_decorator
 def process_sentence_group(sentence_group, list_s):
     # Join the sentences for the prompt
-    print('translating: ' , len(sentence_group), ' ', sentence_group)
+
+    print('translating: ', len(sentence_group), ' ', sentence_group)
 
     joined_sentences = ' '.join(sentence_group)
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
     instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the unique word - phonetic transcription - translation to {language} language. Do not duplicate the list. Here is the text: {prompt}"
 
-    # Assume query_model is a function that sends the prompt to a model and returns the translation
-    #result_text, result_role, full_result, thread_id = query_model(prompt, instruction, assistant_id3, None)
+    result_text = query_no_assist(instruction)
 
-    # query no assist:
-    result_text= query_no_assist(instruction)
+    return result_text
 
-    list_s.append(result_text)
 
 def parse_text_to_sentences(text):
-    print('to be parsed:',text)
+    print('to be parsed:', text)
     nltk.download('punkt')
     tokenizer = nltk.tokenize.PunktSentenceTokenizer()
     tokenizer._params.abbrev_types.add('languages')
 
-    parsed_text= tokenizer.tokenize(text)
+    parsed_text = tokenizer.tokenize(text)
 
     return parsed_text
 
+
 def clean_up_text_to_ascii(ctext):
-    ctext= ctext.replace('\n', '')  # remove line break
-    ctext= ''.join( char for char in ctext if (60 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
+    # ctext= ctext.replace('\n', '')  # remove line break
+    ctext = ''.join(
+        char for char in ctext if (60 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
     return ctext
+
 
 def get_wikipedia_entry_in_language(title, language):
     wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
@@ -506,48 +500,59 @@ def deepl_translate(source_text, target_lang):
     return lang_code, translation
 
 
-def create_json_from_list(text):
-    from airtable import Airtable
+# def create_json_from_list(text):
+#     text = ' '.join(text)  # make it a string
+#
+#     entries = []
+#     # Split the string into individual phrases
+#     phrases = text.split(", ")
+#     for phrase in phrases:
+#         # Further split each phrase by lines if necessary
+#         lines = phrase.split('\n')
+#         for line in lines:
+#             # Split each line into keyword, transcription, and translation
+#             parts = line.split(" - ")
+#             if len(parts) == 3:
+#                 entry = {
+#                     "keyword": ''.join(
+#                         char for char in parts[0].strip("'") if (60 <= ord(char) <= 122) or ord(char) == 32),
+#                     "transcription": parts[1],
+#                     "translation": parts[2],
+#                     "study_status": '---',
+#                     "user": 'slawek',
+#                     "no_of_tries": 0,
+#                     "group": ''
+#
+#                 }
+#                 entries.append(entry)
+#
+#     print('entries', entries)
+#     return entries
 
-    text = ' '.join(text)  # make it a string
 
-    entries = []
-    # Split the string into individual phrases
-    phrases = text.split(", ")
-    for phrase in phrases:
-        # Further split each phrase by lines if necessary
-        lines = phrase.split('\n')
-        for line in lines:
-            # Split each line into keyword, transcription, and translation
-            parts = line.split(" - ")
-            if len(parts) == 3:
-                entry = {
-                    "keyword": ''.join( char for char in parts[0].strip("'") if (60 <= ord(char) <= 122) or ord(char) == 32),
-                    "transcription": parts[1],
-                    "translation": parts[2],
-                    "study_status": '---',
-                    "user": 'slawek',
-                    "no_of_tries": 0,
-                    "group":''
-
-                }
-                entries.append(entry)
-
+def pull_data_from_airtable():
     airtable_records = get_from_airtable()  # Pull data from Airtable
 
+    return airtable_records
+
+
+def substract_airtable_from_translation(translated_text):
+    airtable_text = pull_data_from_airtable()
+
     # Extract keywords from Airtable records
-    airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
+    airtable_keywords = [record['fields'].get('keyword') for record in airtable_text if
                          'keyword' in record['fields']]
 
     # Filter entries to include those not in Airtable already
-    new_entries = [entry for entry in entries if entry['keyword'] not in airtable_keywords]
+    new_entries = [entry for entry in translated_text if entry['keyword'] not in airtable_keywords]
 
     # Now, convert the filtered entries into a JSON string not list!!! It will have to be converted if to be used as list.
 
     json_string = json.dumps(new_entries, indent=4, ensure_ascii=False)
-    json_tmp= json.loads(json_string)
-    if len(json_tmp)==0:
-            st.write('Nie wykryto nowych słowek')
+    json_tmp = json.loads(json_string)
+    if len(json_tmp) == 0:
+        st.write('Nie wykryto nowych słowek')
+
     return json_string
 
 
@@ -560,6 +565,8 @@ def get_from_airtable():
 
 
 def display_json_in_a_grid(my_json):
+    substract_airtable_from_translation(my_json)
+    print('json in display grid:', my_json)
     df = pd.read_json(my_json)
     AgGrid(df)  # d isplay new wods in a gridw_words_to_airtable(my_json)
 
@@ -586,16 +593,53 @@ def display_json_in_a_grid(my_json):
     # updated_data = grid_response['data']
     return
 
-# def select_only_new(added_text):
-#     st.write('select_only_nooew- start')
-#     at= get_from_airtable()
-#     st.write('select_only_new- end ',at)
-#
-#     airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
-#                          'keyword' in record['fields']]
-#
-#     # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
-#     unique_words = [item for item in added_text if item['keyword'] not in airtable_keywords]
-#     unique_words = json.dumps(unique_words)
-#
-#     return unique_words
+
+def convert_to_json(input_string):
+    # Split the input string into components based on ' - ' as delimiter,
+    # assuming the format is: word - phonetic transcription - translation nextWord - ...
+    components = input_string.split(' - ')
+
+    # Initialize an empty list for records
+    records = []
+
+    # Iterate over the components in steps of 3 to process each triplet
+    i = 0
+    while i < len(components) - 2:
+        word = components[i].strip()
+        phonetic_transcription = components[i + 1].strip()
+
+        # For the translation, it's split by the next space which indicates the start of a new word
+        # The translation part needs to consider the possibility of the next word
+        translation_and_next_word = components[i + 2].strip()
+        translation_parts = translation_and_next_word.rsplit(' ', 1)
+
+        if len(translation_parts) == 2:
+            translation, next_word = translation_parts
+            # The next word becomes the start of the next component
+            components[i + 2] = next_word
+        else:
+            translation = translation_parts[0]
+            i += 3  # Move to the next set of components if there's no next word
+
+        # Create a dictionary for the current word
+        record = {
+            "fields": {
+                "word": word,
+                "phonetic_transcription": phonetic_transcription,
+                "translation": translation
+            }
+        }
+
+        # Append the dictionary to the records list
+        records.append(record)
+
+        # Correctly increment the counter based on whether a new word was found
+        i += 2 if len(translation_parts) == 2 else 3
+
+    # Wrap the records list in a dictionary
+    output_json = {"records": records}
+    
+    return output_json
+
+
+

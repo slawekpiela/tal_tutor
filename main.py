@@ -3,9 +3,8 @@ import streamlit as st
 from tal_interface import get_lesson_data  # Import the UI setup function
 from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_recording_id, extract_audio, \
     download_last_recording, transcribe_local, transcribe_any_file_type, save_uploaded_file, \
-     move_file_to_repo, translate_new_list, create_json_from_list,  display_json_in_a_grid ,save_new_words_to_airtable
-from sandbox3 import save_json
-
+    move_file_to_repo, prepare_new_words_list, substract_airtable_from_translation, display_json_in_a_grid, \
+    save_new_words_to_airtable, convert_to_json
 
 # Initialize session state variables if they don't exist
 if 'button_pressed' not in st.session_state:
@@ -59,17 +58,16 @@ try:  # uploading the files
 
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
 
-        text = transcribe_any_file_type(file_path)  # check file type and convert to mp3 if needed and return transcribed text
+        text = transcribe_any_file_type(
+            file_path)  # check file type and convert to mp3 if needed and return transcribed text. result is transcribed text
+
+        list_of_new_words = prepare_new_words_list(text)  # result text is list with translations and create json cleaned to ascii
 
 
-        result_text= translate_new_list(text) # result text is list with translations
+        #st.write('to jest z main: ',    list_of_new_words)
+        #display_json_in_a_grid(list_of_new_words)     #populate the grid
 
-
-        my_json=create_json_from_list(result_text) # create dataframe from
-
-        display_json_in_a_grid(my_json)     #populate the grid
-
-        save_new_words_to_airtable(my_json) # save to airtable
+        #save_new_words_to_airtable(list_of_new_words) # save to airtable
 
 
 

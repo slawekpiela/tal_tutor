@@ -436,7 +436,7 @@ def process_sentence_group(sentence_group, list_s):
     joined_sentences = ' '.join(sentence_group)
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
-    instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: the unique word - phonetic transcription - translation to {language} language. Do not duplicate the list. Here is the text: {prompt}"
+    instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: // the unique word // - // phonetic transcription // - // translation to {language} language //. Do not duplicate the list. Here is the text: {prompt}"
 
     result_text = query_no_assist(instruction)
 
@@ -595,50 +595,35 @@ def display_json_in_a_grid(my_json):
 
 
 def convert_to_json(input_string):
-    # Split the input string into components based on ' - ' as delimiter,
-    # assuming the format is: word - phonetic transcription - translation nextWord - ...
-    components = input_string.split(' - ')
-
-    # Initialize an empty list for records
     records = []
 
-    # Iterate over the components in steps of 3 to process each triplet
-    i = 0
-    while i < len(components) - 2:
-        word = components[i].strip()
-        phonetic_transcription = components[i + 1].strip()
+    # Regular expression to match sequences of '//content//'
+    # It captures content between '//' pairs while ensuring we get non-empty entries
+    matches = re.findall(r"//([^/]+)//", input_string)
 
-        # For the translation, it's split by the next space which indicates the start of a new word
-        # The translation part needs to consider the possibility of the next word
-        translation_and_next_word = components[i + 2].strip()
-        translation_parts = translation_and_next_word.rsplit(' ', 1)
+    # Iterate over the matches in steps of 3 to form each record
+    for i in range(0, len(matches), 3):
+        # Ensure there's a complete set of components for a record
+        if i + 2 < len(matches):
+            word = matches[i].strip()
+            phonetic_transcription = matches[i + 1].strip()
+            translation = matches[i + 2].strip()
 
-        if len(translation_parts) == 2:
-            translation, next_word = translation_parts
-            # The next word becomes the start of the next component
-            components[i + 2] = next_word
-        else:
-            translation = translation_parts[0]
-            i += 3  # Move to the next set of components if there's no next word
-
-        # Create a dictionary for the current word
-        record = {
-            "fields": {
-                "word": word,
-                "phonetic_transcription": phonetic_transcription,
-                "translation": translation
+            # Create the record dictionary
+            record = {
+                "fields": {
+                    "word": word,
+                    "phonetic_transcription": phonetic_transcription,
+                    "translation": translation
+                }
             }
-        }
 
-        # Append the dictionary to the records list
-        records.append(record)
-
-        # Correctly increment the counter based on whether a new word was found
-        i += 2 if len(translation_parts) == 2 else 3
+            # Append the dictionary to the records list
+            records.append(record)
 
     # Wrap the records list in a dictionary
     output_json = {"records": records}
-    
+
     return output_json
 
 

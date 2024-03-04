@@ -343,7 +343,7 @@ def get_last_recording_id():  # whereby last recording ID
 
 
 def save_new_words_to_airtable(data_to_save):
-    st.write('b4 save: ', data_to_save)
+    #st.write('b4 save: ', data_to_save)
     airtable = Airtable(base_id, table_dictionary, airtable_token)
     if data_to_save is None or 'records' not in data_to_save:
         st.write('Data to save is None or missing "records" key.')
@@ -356,7 +356,7 @@ def save_new_words_to_airtable(data_to_save):
             st.write('none caught')
         else:
             response = airtable.insert(record['fields'])
-            st.write('saving', response)
+            # st.write('saving', response)
 
     return
 
@@ -374,15 +374,26 @@ def prepare_new_words_list(transcbd_text):
 
     text_converted_to_json = convert_to_json(translated_text)
     # st.write('converte ', text_converted_to_json)
-    new_words_list = substract_airtable_from_translation(
+    text_converted_to_json = strip_of_duplicates(text_converted_to_json)
+    new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # substract_airtable_from_translation(text_converted_to_json)
 
-    display_json_in_a_grid(new_words_list)
+    display_json_in_a_grid(new_words_list, is_set_full)
     save_new_words_to_airtable(new_words_list)
     # save to airtable
     return new_words_list
 
+def strip_of_duplicates(data_structure):
 
+    st.write('data structure to make uniqe',data_structure)
+    # Use list comprehension with enumerate to filter out duplicates
+    records_list = data_structure['records']
+    unique_records = [i for n, i in enumerate(records_list) if i not in records_list[n + 1:]]
+
+    # Update the original dictionary with the list of unique records
+    data_structure['records'] = unique_records
+    st.write('uniqe data structure', data_structure)
+    return data_structure
 def run_text_through_llm(sentences):
     list_s = ''  # list to store results
     sentence_group = []  # Temporary storage for accumulating sentences
@@ -514,8 +525,14 @@ def substract_airtable_from_translation(new_words_list):
     new_words_list = new_words_list['records']
 
     new_words_list = {"records": new_words_list}
-    st.write(' substract and wrapped in recorsd: ', new_words_list)
-    return new_words_list
+    #st.write(' substract and wrapped in recorsd: ', new_words_list)
+
+    if any('fields' in record for record in new_words_list.get('records', [])): # test if it is not empty
+        is_set_full= True
+    else:
+
+        is_set_full=False
+    return new_words_list, is_set_full
 
 
 def get_from_airtable():
@@ -526,22 +543,23 @@ def get_from_airtable():
     return airtable_records
 
 
-def display_json_in_a_grid(new_words_list):
-    st.write('passed to display: ', new_words_list)
-    records_list = new_words_list['records']
+def display_json_in_a_grid(new_words_list, is_set_full):
+    if is_set_full:
+        records_list = new_words_list['records']
+        st.write('set full')
+        # Create a DataFrame from the list of dictionaries
+        df = pd.DataFrame([record['fields'] for record in records_list])
 
-    # Create a DataFrame from the list of dictionaries
-    df = pd.DataFrame([record['fields'] for record in records_list])
+        # Specifying columns to display
+        # For example, to display only 'word' and 'translation'
+        selected_columns = ['keyword', 'transcription', 'translation']
+        filtered_df = df[selected_columns]
 
-    # Specifying columns to display
-    # For example, to display only 'word' and 'translation'
-    selected_columns = ['keyword', 'transcription', 'translation']
-    filtered_df = df[selected_columns]
-
-    # Display in AG Grid
-    st.title("New vocabulary")
-    AgGrid(filtered_df)
-
+        # Display in AG Grid
+        st.title("New vocabulary")
+        AgGrid(filtered_df)
+    else:
+        st.write('no new words')
     return
 
     # Example usage
@@ -586,24 +604,25 @@ def convert_to_json(input_string):
             translation = matches[i + 2].strip()
 
             # Create the record dictionary
-            record = {
-                "fields": {
-                    "keyword": word,
-                    "transcription": phonetic_transcription,
-                    "translation": translation,
-                    "study_status": '---',
-                    "translation_extended": "",
-                    "user": 'slawek',
-                    "no_of_tries": 0,
-                    "group": 'general'
+            if len(word)>1: # safeguard against llm 'funnies'
+                record = {
+                    "fields": {
+                        "keyword": word,
+                        "transcription": phonetic_transcription,
+                        "translation": translation,
+                        "study_status": '---',
+                        "translation_extended": "",
+                        "user": 'slawek',
+                        "no_of_tries": 0,
+                        "group": 'general'
+                    }
                 }
-            }
 
-            # Append the dictionary to the records list
-            records.append(record)
-
+                # Append the dictionary to the records list
+                records.append(record)
+            else:
+                print('cos nie tak; ',word, ' ', input_string)
     # Wrap the records list in a dictionary
     output_json = {"records": records}
-    st.write('in convert to json: ', output_json)
 
     return output_json

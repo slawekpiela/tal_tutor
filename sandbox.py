@@ -1,75 +1,130 @@
-import json
-import requests
-from configuration import base_id, airtable_token, table_dictionary
-import json
-import requests
-from configuration import base_id, airtable_token, table_dictionary
-import streamlit as st
 from airtable import Airtable
-from configuration import airtable_token, base_id, table_dictionary
-# Example JSON data
+from configuration import base_id, table_dictionary, airtable_token
+import pandas as pd
+import streamlit as st
 
-# # json_data = [
-# #     {"fields": {"keyword": "John", "transcription":"ˈɜr.li"}},
-# #     {"fields": {"keyword": "Alice", "transcription":"ˈɜr.li"}},
-# #
-# # ]
-# #{"fields": " "}, {"fields": " "}, {"fields": "}"}, {"fields": "\n"}, {"fields": "]"}]}}
-my_json={'records': [{'fields': {'keyword': 'Off', 'transcription': '/ɔf/', 'translation': '-', 'study_status': '---',
-                         'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Early', 'transcription': '/ˈɜrli/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'In', 'transcription': '/ɪn/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'The', 'transcription': '/ðə/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Morning', 'transcription': '/ˈmɔrnɪŋ/', 'translation': '-',
-                            'study_status': '---', 'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Towards', 'transcription': '/təˈwɔrdz/', 'translation': '-',
-                            'study_status': '---', 'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Moon', 'transcription': '/mun/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'He', 'transcription': '/hiː/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Knew', 'transcription': '/njuː/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'That', 'transcription': '/ðæt/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Going', 'transcription': '/ˈɡoʊɪŋ/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'There', 'transcription': '/ˈðɛr/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Will', 'transcription': '/wɪl/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Be', 'transcription': '/bi/', 'translation': '-', 'study_status': '---',
-                            'user': 'slawek', 'no_of_tries': 0, 'group': ''}}, {
-                 'fields': {'keyword': 'Exciting', 'transcription': '/ɪkˈsaɪtɪŋ/', 'translation': '-',
-                            'study_status': '---', 'user': 'slawek', 'no_of_tries': 0, 'group': ''}}]}
+input_string = {
+  "records": [
+    {
+      "fields": {
+        "word": "chris",
+        "phonetic_transcription": "krɪs",
+        "translation": "Krzysiek"
+      }
+    },
+    {
+      "fields": {
+        "word": "set off",
+        "phonetic_transcription": "set ɒf",
+        "translation": "wyruszyć"
+      }
+    },
+    {
+      "fields": {
+        "word": "early",
+        "phonetic_transcription": "ˈɜrli",
+        "translation": "wcześnie"
+      }
+    },
+    {
+      "fields": {
+        "word": "in",
+        "phonetic_transcription": "ɪn",
+        "translation": "w"
+      }
+    },
+    {
+      "fields": {
+        "word": "the",
+        "phonetic_transcription": "ðə",
+        "translation": ""
+      }
+    },
+    {
+      "fields": {
+        "word": "morning",
+        "phonetic_transcription": "ˈmɔːrnɪŋ",
+        "translation": "rano"
+      }
+    },
+    {
+      "fields": {
+        "word": "towards",
+        "phonetic_transcription": "təˈwɔːrdz",
+        "translation": "w kierunku"
+      }
+    },
+    {
+      "fields": {
+        "word": "the",
+        "phonetic_transcription": "ðə",
+        "translation": ""
+      }
+    },
+    {
+      "fields": {
+        "word": "moon",
+        "phonetic_transcription": "muːn",
+        "translation": "księżyc"
+      }
+    },
+    {
+      "fields": {
+        "word": "he",
+        "phonetic_transcription": "hiː",
+        "translation": "on"
+      }
+    },
+    {
+      "fields": {
+        "word": "knew",
+        "phonetic_transcription": "njuː",
+        "translation": "wiedział"
+      }
+    },
+    {
+      "fields": {
+        "word": "that",
+        "phonetic_transcription": "ðæt",
+        "translation": "że"
+      }
+    },
+    {
+      "fields": {
+        "word": "going",
+        "phonetic_transcription": "ˈɡoʊɪŋ",
+        "translation": "idąc"
+      }
+    },
+    {
+      "fields": {
+        "word": "there",
+        "phonetic_transcription": "ðer",
+        "translation": "tam"
+      }
+    },
+    {
+      "fields": {
+        "word": "will",
+        "phonetic_transcription": "wɪl",
+        "translation": "będzie"
+      }
+    },
+    {
+      "fields": {
+        "word": "be",
+        "phonetic_transcription": "biː",
+        "translation": "być"
+      }
+    },
+    {
+      "fields": {
+        "word": "exciting",
+        "phonetic_transcription": "ɪkˈsaɪtɪŋ",
+        "translation": "ekscytujące"
+      }
+    }
+  ]
+}
 
-# print(json_data)
-# from airtable import Airtable
-#
-# # Assuming base_id, table_dictionary, and airtable_token are defined
-# airtable = Airtable(base_id, table_dictionary, airtable_token)
-#
-# # Iterate through each record in the provided JSON data
-# for record in json_data['records']:
-#     # Extract the 'fields' dictionary, which contains the actual data to be inserted
-#     fields = record['fields']
-#
-#     # Use the 'fields' dictionary directly when inserting into Airtable
-#     response = airtable.insert(fields)
-#
-#     # Print the response to confirm the insertion
-#     print(response)
-#     print('-------------------------------')
-airtable = Airtable(base_id, table_dictionary, airtable_token)
 
-# Iterate through each record in the provided JSON data
-for record in my_json['records']:
-    # Extract the 'fields' dictionary, which contains the actual data to be inserted
-    fields = record['fields']
-
-    # Use the 'fields' dictionary directly when inserting into Airtable
-    response = airtable.insert(fields)
-    print(response)

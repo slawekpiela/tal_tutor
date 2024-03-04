@@ -61,13 +61,12 @@ try:  # uploading the files
         text = transcribe_any_file_type(
             file_path)  # check file type and convert to mp3 if needed and return transcribed text. result is transcribed text
 
-        list_of_new_words = prepare_new_words_list(text)  # result text is list with translations and create json cleaned to ascii
+        list_of_new_words = prepare_new_words_list(
+            text)  # result text is list with translations and create json cleaned to ascii
 
+        #display_json_in_a_grid(list_of_new_words)  # populate the grid
 
-        #st.write('to jest z main: ',    list_of_new_words)
-        #display_json_in_a_grid(list_of_new_words)     #populate the grid
-
-        #save_new_words_to_airtable(list_of_new_words) # save to airtable
+       #save_new_words_to_airtable(list_of_new_words) # save to airtable
 
 
 

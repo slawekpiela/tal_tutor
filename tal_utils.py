@@ -342,36 +342,21 @@ def get_last_recording_id():  # whereby last recording ID
         return "error"
 
 
-# def remove_words_already_on_airtable(json_with_all_words):
-#     airtable = Airtable(base_id, table_dictionary, airtable_token)
-#
-#     # Fetch all records from Airtable
-#     airtable_records = airtable.get_all()
-#
-#     airtable_keywords = [record['fields'].get('keyword') for record in airtable_records if
-#                          'keyword' in record['fields']]
-#     # Your JSON data
-#     json_data = json_with_all_words
-#
-#     # Remove items from json_data that have a keyword matching any keyword in airtable_keywords
-#     filtered_json_data = [item for item in json_data if item['keyword'] not in airtable_keywords]
-#
-#     print(filtered_json_data)
-#
-#     return json_data
-
-
-def save_new_words_to_airtable(my_json):
+def save_new_words_to_airtable(data_to_save):
+    st.write('b4 save: ', data_to_save)
     airtable = Airtable(base_id, table_dictionary, airtable_token)
-    st.write(my_json)
-    # Iterate through each record in the provided JSON data
-    for record in my_json['records']:
-        # Extract the 'fields' dictionary, which contains the actual data to be inserted
-        fields = record['fields']
+    if data_to_save is None or 'records' not in data_to_save:
+        st.write('Data to save is None or missing "records" key.')
+        return  # Exit the function if data_to_save is None or doesn't contain 'records'
 
-        # Use the 'fields' dictionary directly when inserting into Airtable
-        response = airtable.insert(fields)
-        print(response)
+    airtable = Airtable(base_id, table_dictionary, airtable_token)
+
+    for record in data_to_save['records']:
+        if record is None:
+            st.write('none caught')
+        else:
+            response = airtable.insert(record['fields'])
+            st.write('saving', response)
 
     return
 
@@ -385,12 +370,16 @@ def prepare_new_words_list(transcbd_text):
 
     # translate and place translation in list_s
     translated_text = run_text_through_llm(sentences)
-    st.write('translated tex:',translated_text)
+    # st.write('translated tex:', translated_text)
 
     text_converted_to_json = convert_to_json(translated_text)
-    st.write('converte ', text_converted_to_json)
-    new_words_list =''# substract_airtable_from_translation(text_converted_to_json)
+    # st.write('converte ', text_converted_to_json)
+    new_words_list = substract_airtable_from_translation(
+        text_converted_to_json)  # substract_airtable_from_translation(text_converted_to_json)
 
+    display_json_in_a_grid(new_words_list)
+    save_new_words_to_airtable(new_words_list)
+    # save to airtable
     return new_words_list
 
 
@@ -413,16 +402,14 @@ def run_text_through_llm(sentences):
             # Process the group if it has reached the specified number of sentences
             if len(sentence_group) >= sentences_batch_size:
                 # Function to process the accumulated sentences
-                result_text=process_sentence_group(sentence_group, list_s)  # pass to LLM
-                list_s = list_s+result_text
+                result_text = process_sentence_group(sentence_group, list_s)  # pass to LLM
+                list_s = list_s + result_text
                 sentence_group = []  # Reset for next group (rsult is placed in list_s variable
 
     # After going through all sentences, check if there's an incomplete group left
     if sentence_group:  # This will be True if sentence_group is not empty
-        result_text= process_sentence_group(sentence_group, list_s)
-        list_s=list_s+result_text
-
-    st.write('final list_s', list_s)
+        result_text = process_sentence_group(sentence_group, list_s)
+        list_s = list_s + result_text
 
     return list_s
 
@@ -462,32 +449,35 @@ def clean_up_text_to_ascii(ctext):
 
 
 def get_wikipedia_entry_in_language(title, language):
-    wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
-    page_py = wiki_wiki.page(title)
+    pass
 
-    if not page_py.exists():
-        print("The page does not exist.")
-        return None
 
-    # Print the summary of the page in English
-    print("Summary (English):")
-    print(page_py.summary[0:1200])
-
-    # Now, find the same page in the requested language
-    if language in page_py.langlinks:
-        wiki_lang = wikipediaapi.Wikipedia(language=language, user_agent='slawek.piela@koios-mal.pl')
-        title_in_language = page_py.langlinks[language].title
-
-        page_in_lang = wiki_lang.page(page_py.langlinks[language].title)
-
-        print(f"\nTITLE: {title_in_language} it is:")
-        print(f"\nSummary ({language}):")
-
-        print(page_in_lang.summary[0:1000])
-    else:
-        print(f"No page found for language code: {language}")
-
-    # to call this function use:   get_wikipedia_entry_in_language(text, "pl") where PL is language we translate to.
+# wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
+# page_py = wiki_wiki.page(title)
+#
+# if not page_py.exists():
+#     print("The page does not exist.")
+#     return None
+#
+# # Print the summary of the page in English
+# print("Summary (English):")
+# print(page_py.summary[0:1200])
+#
+# # Now, find the same page in the requested language
+# if language in page_py.langlinks:
+#     wiki_lang = wikipediaapi.Wikipedia(language=language, user_agent='slawek.piela@koios-mal.pl')
+#     title_in_language = page_py.langlinks[language].title
+#
+#     page_in_lang = wiki_lang.page(page_py.langlinks[language].title)
+#
+#     print(f"\nTITLE: {title_in_language} it is:")
+#     print(f"\nSummary ({language}):")
+#
+#     print(page_in_lang.summary[0:1000])
+# else:
+#     print(f"No page found for language code: {language}")
+#
+# # to call this function use:   get_wikipedia_entry_in_language(text, "pl") where PL is language we translate to.
 
 
 def deepl_translate(source_text, target_lang):
@@ -500,60 +490,32 @@ def deepl_translate(source_text, target_lang):
     return lang_code, translation
 
 
-# def create_json_from_list(text):
-#     text = ' '.join(text)  # make it a string
-#
-#     entries = []
-#     # Split the string into individual phrases
-#     phrases = text.split(", ")
-#     for phrase in phrases:
-#         # Further split each phrase by lines if necessary
-#         lines = phrase.split('\n')
-#         for line in lines:
-#             # Split each line into keyword, transcription, and translation
-#             parts = line.split(" - ")
-#             if len(parts) == 3:
-#                 entry = {
-#                     "keyword": ''.join(
-#                         char for char in parts[0].strip("'") if (60 <= ord(char) <= 122) or ord(char) == 32),
-#                     "transcription": parts[1],
-#                     "translation": parts[2],
-#                     "study_status": '---',
-#                     "user": 'slawek',
-#                     "no_of_tries": 0,
-#                     "group": ''
-#
-#                 }
-#                 entries.append(entry)
-#
-#     print('entries', entries)
-#     return entries
-
-
 def pull_data_from_airtable():
     airtable_records = get_from_airtable()  # Pull data from Airtable
 
     return airtable_records
 
 
-def substract_airtable_from_translation(translated_text):
-    airtable_text = pull_data_from_airtable()
+def substract_airtable_from_translation(new_words_list):
+    airtable = Airtable(base_id, table_dictionary, airtable_token)
 
-    # Extract keywords from Airtable records
-    airtable_keywords = [record['fields'].get('keyword') for record in airtable_text if
-                         'keyword' in record['fields']]
+    # Pull data from Airtable
+    airtable_records = airtable.get_all()
 
-    # Filter entries to include those not in Airtable already
-    new_entries = [entry for entry in translated_text if entry['keyword'] not in airtable_keywords]
+    # Assuming 'keyword' or a similar field exists in your Airtable records
+    airtable_keywords = [record['fields'].get('keyword') for record in airtable_records]
 
-    # Now, convert the filtered entries into a JSON string not list!!! It will have to be converted if to be used as list.
+    # Filter input_string records, keeping those where 'word' is not in airtable_keywords
+    filtered_records = [record for record in new_words_list['records'] if
+                        record['fields']['keyword'] not in airtable_keywords]
 
-    json_string = json.dumps(new_entries, indent=4, ensure_ascii=False)
-    json_tmp = json.loads(json_string)
-    if len(json_tmp) == 0:
-        st.write('Nie wykryto nowych słowek')
+    # Update input_string with filtered records
+    new_words_list['records'] = filtered_records
+    new_words_list = new_words_list['records']
 
-    return json_string
+    new_words_list = {"records": new_words_list}
+    st.write(' substract and wrapped in recorsd: ', new_words_list)
+    return new_words_list
 
 
 def get_from_airtable():
@@ -564,11 +526,25 @@ def get_from_airtable():
     return airtable_records
 
 
-def display_json_in_a_grid(my_json):
-    substract_airtable_from_translation(my_json)
-    print('json in display grid:', my_json)
-    df = pd.read_json(my_json)
-    AgGrid(df)  # d isplay new wods in a gridw_words_to_airtable(my_json)
+def display_json_in_a_grid(new_words_list):
+    st.write('passed to display: ', new_words_list)
+    records_list = new_words_list['records']
+
+    # Create a DataFrame from the list of dictionaries
+    df = pd.DataFrame([record['fields'] for record in records_list])
+
+    # Specifying columns to display
+    # For example, to display only 'word' and 'translation'
+    selected_columns = ['keyword', 'transcription', 'translation']
+    filtered_df = df[selected_columns]
+
+    # Display in AG Grid
+    st.title("New vocabulary")
+    AgGrid(filtered_df)
+
+    return
+
+    # Example usage
 
     # dataframe = pd.read_json(my_json)
     # # Now pass the DataFrame instead of the list
@@ -612,9 +588,14 @@ def convert_to_json(input_string):
             # Create the record dictionary
             record = {
                 "fields": {
-                    "word": word,
-                    "phonetic_transcription": phonetic_transcription,
-                    "translation": translation
+                    "keyword": word,
+                    "transcription": phonetic_transcription,
+                    "translation": translation,
+                    "study_status": '---',
+                    "translation_extended": "",
+                    "user": 'slawek',
+                    "no_of_tries": 0,
+                    "group": 'general'
                 }
             }
 
@@ -623,8 +604,6 @@ def convert_to_json(input_string):
 
     # Wrap the records list in a dictionary
     output_json = {"records": records}
+    st.write('in convert to json: ', output_json)
 
     return output_json
-
-
-

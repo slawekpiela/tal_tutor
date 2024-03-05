@@ -343,7 +343,7 @@ def get_last_recording_id():  # whereby last recording ID
 
 
 def save_new_words_to_airtable(data_to_save):
-    #st.write('b4 save: ', data_to_save)
+    # st.write('b4 save: ', data_to_save)
     airtable = Airtable(base_id, table_dictionary, airtable_token)
     if data_to_save is None or 'records' not in data_to_save:
         st.write('Data to save is None or missing "records" key.')
@@ -383,17 +383,19 @@ def prepare_new_words_list(transcbd_text):
     # save to airtable
     return new_words_list
 
-def strip_of_duplicates(data_structure):
 
-    st.write('data structure to make uniqe',data_structure)
+def strip_of_duplicates(data_structure):
+    # st.write('data structure to make uniqe', data_structure)
     # Use list comprehension with enumerate to filter out duplicates
     records_list = data_structure['records']
     unique_records = [i for n, i in enumerate(records_list) if i not in records_list[n + 1:]]
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records
-    st.write('uniqe data structure', data_structure)
+    # st.write('uniqe data structure', data_structure)
     return data_structure
+
+
 def run_text_through_llm(sentences):
     list_s = ''  # list to store results
     sentence_group = []  # Temporary storage for accumulating sentences
@@ -407,7 +409,7 @@ def run_text_through_llm(sentences):
 
         if lang_code == 'en' and len(sentence) > 3:  # ignore sentences shorter than 3 chars
 
-            print(f"This is sentence number {index} :  {sentence}  sentence len: {len(sentence)}")
+            # print(f"This is sentence number {index} :  {sentence}  sentence len: {len(sentence)}")
             sentence_group.append(sentence)  # append temporary storage
 
             # Process the group if it has reached the specified number of sentences
@@ -420,10 +422,11 @@ def run_text_through_llm(sentences):
     # After going through all sentences, check if there's an incomplete group left
     if sentence_group:  # This will be True if sentence_group is not empty
         result_text = process_sentence_group(sentence_group, list_s)
+        result_text= clean_up_text_translated(result_text)
+        # correct transcription with : https://easypronunciation.com/en/pricing
         list_s = list_s + result_text
 
     return list_s
-
 
 @timing_decorator
 def process_sentence_group(sentence_group, list_s):
@@ -434,9 +437,11 @@ def process_sentence_group(sentence_group, list_s):
     joined_sentences = ' '.join(sentence_group)
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
-    instruction = f"List absolutely all unique words in text between [START] and [END] always keep phrasal verbs together. Ignore proper names. Use this format: // the unique word // - // phonetic transcription // - // translation to {language} language //. Do not duplicate the list. Here is the text: {prompt}"
+    instruction = f"List absolutely all words in the text between [START] and [END]. Always keep phrasal verbs together. Ignore proper names. List words in this format: first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language. Here is the text: {prompt}"
 
     result_text = query_no_assist(instruction)
+    # print('raw from llm: ', result_text)
+    # st.write('raw from llm: ', result_text)
 
     return result_text
 
@@ -453,9 +458,16 @@ def parse_text_to_sentences(text):
 
 
 def clean_up_text_to_ascii(ctext):
-    # ctext= ctext.replace('\n', '')  # remove line break
     ctext = ''.join(
-        char for char in ctext if (60 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
+        char for char in ctext if
+        (65 <= ord(char) <= 90) or (97 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
+    return ctext
+
+
+def clean_up_text_translated(ctext):
+    ctext = ''.join(
+        char for char in ctext if
+        47 != ord(char))  # leave only letter and space
     return ctext
 
 
@@ -525,13 +537,13 @@ def substract_airtable_from_translation(new_words_list):
     new_words_list = new_words_list['records']
 
     new_words_list = {"records": new_words_list}
-    #st.write(' substract and wrapped in recorsd: ', new_words_list)
+    # st.write(' substract and wrapped in recorsd: ', new_words_list)
 
-    if any('fields' in record for record in new_words_list.get('records', [])): # test if it is not empty
-        is_set_full= True
+    if any('fields' in record for record in new_words_list.get('records', [])):  # test if it is not empty
+        is_set_full = True
     else:
 
-        is_set_full=False
+        is_set_full = False
     return new_words_list, is_set_full
 
 
@@ -591,24 +603,24 @@ def display_json_in_a_grid(new_words_list, is_set_full):
 def convert_to_json(input_string):
     records = []
 
-    # Regular expression to match sequences of '//content//'
-    # It captures content between '//' pairs while ensuring we get non-empty entries
-    matches = re.findall(r"//([^/]+)//", input_string)
+    # Adjusted regular expression to match the new format
+    # It captures content after '>>' and ensures we get non-empty entries
+    matches = re.findall(r'>>\s*(.*?)(?=\s*>>|$)', input_string, flags=re.DOTALL)
 
     # Iterate over the matches in steps of 3 to form each record
     for i in range(0, len(matches), 3):
         # Ensure there's a complete set of components for a record
         if i + 2 < len(matches):
             word = matches[i].strip()
-            phonetic_transcription = matches[i + 1].strip()
+            transcription = matches[i + 1].strip()
             translation = matches[i + 2].strip()
 
             # Create the record dictionary
-            if len(word)>1: # safeguard against llm 'funnies'
+            if len(word) > 1:  # Safeguard against empty entries
                 record = {
                     "fields": {
                         "keyword": word,
-                        "transcription": phonetic_transcription,
+                        "transcription": transcription,
                         "translation": translation,
                         "study_status": '---',
                         "translation_extended": "",
@@ -621,8 +633,8 @@ def convert_to_json(input_string):
                 # Append the dictionary to the records list
                 records.append(record)
             else:
-                print('cos nie tak; ',word, ' ', input_string)
-    # Wrap the records list in a dictionary
+                print('Something is not right; ', word, ' ', input_string)
+
     output_json = {"records": records}
 
     return output_json

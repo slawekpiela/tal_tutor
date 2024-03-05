@@ -343,7 +343,8 @@ def get_last_recording_id():  # whereby last recording ID
 
 
 def save_new_words_to_airtable(data_to_save):
-    # st.write('b4 save: ', data_to_save)
+    data_to_save = {"records": data_to_save}
+    st.write('passed to be saved and now wrapped: ', data_to_save)
     airtable = Airtable(base_id, table_dictionary, airtable_token)
     if data_to_save is None or 'records' not in data_to_save:
         st.write('Data to save is None or missing "records" key.')
@@ -372,14 +373,14 @@ def prepare_new_words_list(transcbd_text):
     translated_text = run_text_through_llm(sentences)
     # st.write('translated tex:', translated_text)
 
-    text_converted_to_json = convert_to_json(translated_text)
+    text_converted_to_json = convert_to_json(translated_text)  # from llm to structured data
     # st.write('converte ', text_converted_to_json)
-    text_converted_to_json = strip_of_duplicates(text_converted_to_json)
+    text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
     new_words_list, is_set_full = substract_airtable_from_translation(
-        text_converted_to_json)  # substract_airtable_from_translation(text_converted_to_json)
+        text_converted_to_json)  # leave only new words in the dataset
 
-    display_json_in_a_grid(new_words_list, is_set_full)
-    save_new_words_to_airtable(new_words_list)
+    new_word_list_edited = display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid
+    save_new_words_to_airtable(new_word_list_edited)  # save to airtable
     # save to airtable
     return new_words_list
 
@@ -422,13 +423,13 @@ def run_text_through_llm(sentences):
     # After going through all sentences, check if there's an incomplete group left
     if sentence_group:  # This will be True if sentence_group is not empty
         result_text = process_sentence_group(sentence_group, list_s)
-        result_text= clean_up_text_translated(result_text)
+        result_text = clean_up_text_translated(result_text)
         # correct transcription with : https://easypronunciation.com/en/pricing
         list_s = list_s + result_text
 
     return list_s
 
-@timing_decorator
+
 def process_sentence_group(sentence_group, list_s):
     # Join the sentences for the prompt
 
@@ -537,13 +538,13 @@ def substract_airtable_from_translation(new_words_list):
     new_words_list = new_words_list['records']
 
     new_words_list = {"records": new_words_list}
-    # st.write(' substract and wrapped in recorsd: ', new_words_list)
 
     if any('fields' in record for record in new_words_list.get('records', [])):  # test if it is not empty
         is_set_full = True
     else:
 
         is_set_full = False
+    # st.write('this is returned from substract form airtable', new_words_list)
     return new_words_list, is_set_full
 
 
@@ -558,46 +559,64 @@ def get_from_airtable():
 def display_json_in_a_grid(new_words_list, is_set_full):
     if is_set_full:
         records_list = new_words_list['records']
-        st.write('set full')
-        # Create a DataFrame from the list of dictionaries
-        df = pd.DataFrame([record['fields'] for record in records_list])
+        original_dataframe = pd.DataFrame([record['fields'] for record in records_list])
 
-        # Specifying columns to display
-        # For example, to display only 'word' and 'translation'
-        selected_columns = ['keyword', 'transcription', 'translation']
-        filtered_df = df[selected_columns]
+        # Function to display the editable grid and process updates
+        def display_editable_grid(dataframe):
+            # Create a copy of the dataframe for the editable grid
+            editable_dataframe = dataframe[['keyword', 'transcription', 'translation']].copy()
 
-        # Display in AG Grid
-        st.title("New vocabulary")
-        AgGrid(filtered_df)
+            # Configure the editable grid
+            gb = GridOptionsBuilder.from_dataframe(editable_dataframe)
+            gb.configure_grid_options(domLayout='normal')
+            gb.configure_columns(['keyword', 'transcription', 'translation'], editable=True)
+            grid_options = gb.build()
+
+            # Display the editable AgGrid and return the grid response
+            grid_response = AgGrid(
+                editable_dataframe,
+                gridOptions=grid_options,
+                update_mode=GridUpdateMode.MODEL_CHANGED,
+                fit_columns_on_grid_load=True
+            )
+
+            return grid_response
+
+        # Display the editable grid and capture the response
+        grid_response = display_editable_grid(original_dataframe)
+
+        # Add a 'Save' button to apply changes from the editable grid
+        if st.button('Save Changes'):
+            # Extract the updated data from the grid response
+            updated_data = pd.DataFrame(grid_response['data'])
+
+            # Replace the original dataframe sections with the updated data
+            for col in ['keyword', 'transcription', 'translation']:
+                original_dataframe[col] = updated_data[col]
+            st.write('b4 saving', original_dataframe)
+            return original_dataframe
     else:
-        st.write('no new words')
-    return
+        st.write('No new words')
 
-    # Example usage
 
-    # dataframe = pd.read_json(my_json)
-    # # Now pass the DataFrame instead of the list
-    # gb = GridOptionsBuilder.from_dataframe(dataframe)
-    # gb.configure_grid_options(domLayout='normal')
-    # gb.configure_column("Keyword", editable=True)  # Make the name column non-editable
-    # gb.gb.configure_column("Transcription", editable=True)  # Make the quantity column editable
-    # gb.gb.configure_column("Translation", editable=True)  # Make the quantity column editable
-    #
-    # # Continue as before
-    # grid_options = gb.build()
-    #
-    # # Display the grid
-    # grid_response = AgGrid(
-    #     dataframe,
-    #     gridOptions=grid_options,
-    #     update_mode=GridUpdateMode.MODEL_CHANGED,  # Update mode to capture changes
-    #     fit_columns_on_grid_load=True,
-    # )
-    #
-    # # Get updated data
-    # updated_data = grid_response['data']
-    return
+# THIS WORKS ANDIS NOT EDITABLE
+# if is_set_full:
+#     records_list = new_words_list['records']
+#     st.write('set full')
+#     # Create a DataFrame from the list of dictionaries
+#     df = pd.DataFrame([record['fields'] for record in records_list])
+#
+#     # Specifying columns to display
+#     # For example, to display only 'word' and 'translation'
+#     selected_columns = ['keyword', 'transcription', 'translation']
+#     filtered_df = df[selected_columns]
+#
+#     # Display in AG Grid
+#     st.title("New vocabulary")
+#     AgGrid(filtered_df)
+# else:
+#     st.write('no new words')
+# return
 
 
 def convert_to_json(input_string):

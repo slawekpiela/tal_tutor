@@ -2,129 +2,243 @@ from airtable import Airtable
 from configuration import base_id, table_dictionary, airtable_token
 import pandas as pd
 import streamlit as st
+from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
-input_string = {
+
+new_words_list = {
   "records": [
     {
       "fields": {
-        "word": "chris",
-        "phonetic_transcription": "krɪs",
-        "translation": "Krzysiek"
+        "keyword": "chris",
+        "transcription": "krɪs",
+        "translation": "Krzysiek",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "set off",
-        "phonetic_transcription": "set ɒf",
-        "translation": "wyruszyć"
+        "keyword": "set off",
+        "transcription": "sɛt ɔf",
+        "translation": "wyruszyć",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "early",
-        "phonetic_transcription": "ˈɜrli",
-        "translation": "wcześnie"
+        "keyword": "early",
+        "transcription": "ˈɜrli",
+        "translation": "wcześnie",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "in",
-        "phonetic_transcription": "ɪn",
-        "translation": "w"
+        "keyword": "in",
+        "transcription": "ɪn",
+        "translation": "w",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "the",
-        "phonetic_transcription": "ðə",
-        "translation": ""
+        "keyword": "morning",
+        "transcription": "ˈmɔrnɪŋ",
+        "translation": "ranek",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "morning",
-        "phonetic_transcription": "ˈmɔːrnɪŋ",
-        "translation": "rano"
+        "keyword": "towards",
+        "transcription": "təˈwɔrdz",
+        "translation": "w kierunku",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "towards",
-        "phonetic_transcription": "təˈwɔːrdz",
-        "translation": "w kierunku"
+        "keyword": "the",
+        "transcription": "ðə",
+        "translation": "(przyimek określony)",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "the",
-        "phonetic_transcription": "ðə",
-        "translation": ""
+        "keyword": "moon",
+        "transcription": "mun",
+        "translation": "księżyc",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "moon",
-        "phonetic_transcription": "muːn",
-        "translation": "księżyc"
+        "keyword": "he",
+        "transcription": "hi",
+        "translation": "on",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "he",
-        "phonetic_transcription": "hiː",
-        "translation": "on"
+        "keyword": "knew",
+        "transcription": "nju",
+        "translation": "wiedział",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "knew",
-        "phonetic_transcription": "njuː",
-        "translation": "wiedział"
+        "keyword": "that",
+        "transcription": "ðæt",
+        "translation": "że",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "that",
-        "phonetic_transcription": "ðæt",
-        "translation": "że"
+        "keyword": "going",
+        "transcription": "ˈɡoʊɪŋ",
+        "translation": "idąc",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "going",
-        "phonetic_transcription": "ˈɡoʊɪŋ",
-        "translation": "idąc"
+        "keyword": "there",
+        "transcription": "ˈðɛr",
+        "translation": "tam",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "there",
-        "phonetic_transcription": "ðer",
-        "translation": "tam"
+        "keyword": "will",
+        "transcription": "wɪl",
+        "translation": "będzie",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "will",
-        "phonetic_transcription": "wɪl",
-        "translation": "będzie"
+        "keyword": "be",
+        "transcription": "bi",
+        "translation": "być",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     },
     {
       "fields": {
-        "word": "be",
-        "phonetic_transcription": "biː",
-        "translation": "być"
-      }
-    },
-    {
-      "fields": {
-        "word": "exciting",
-        "phonetic_transcription": "ɪkˈsaɪtɪŋ",
-        "translation": "ekscytujące"
+        "keyword": "exciting",
+        "transcription": "ɪkˈsaɪtɪŋ",
+        "translation": "ekscytujące",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
       }
     }
   ]
 }
+records_list = new_words_list['records']
+original_dataframe = pd.DataFrame([record['fields'] for record in records_list])
 
 
+# Function to display the editable grid and process updates
+def display_editable_grid(dataframe):
+  # Create a copy of the dataframe for the editable grid
+  editable_dataframe = dataframe[['keyword', 'transcription', 'translation']].copy()
+
+  # Configure the editable grid
+  gb = GridOptionsBuilder.from_dataframe(editable_dataframe)
+  gb.configure_grid_options(domLayout='normal')
+  gb.configure_columns(['keyword', 'transcription', 'translation'], editable=True)
+  grid_options = gb.build()
+
+  # Display the editable AgGrid and return the grid response
+  grid_response = AgGrid(
+    editable_dataframe,
+    gridOptions=grid_options,
+    update_mode=GridUpdateMode.MODEL_CHANGED,
+    fit_columns_on_grid_load=True
+  )
+
+  return grid_response
+
+
+# Display the editable grid and capture the response
+grid_response = display_editable_grid(original_dataframe)
+
+# Add a 'Save' button to apply changes from the editable grid
+if st.button('Save Changes'):
+  # Extract the updated data from the grid response
+  updated_data = pd.DataFrame(grid_response['data'])
+
+  # Replace the original dataframe sections with the updated data
+  for col in ['keyword', 'transcription', 'translation']:
+    original_dataframe[col] = updated_data[col]
+
+  st.success('Changes saved successfully!')
+  # Display the updated DataFrame to confirm changes
+  st.write('Updated Data:', original_dataframe)

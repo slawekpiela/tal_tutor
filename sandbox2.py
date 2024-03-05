@@ -1,44 +1,196 @@
-import re
-
-def convert_to_json_v6_corrected(input_string):
-    # Initialize an empty list for records
-    records = []
-
-    # Regular expression to match sequences of '//content//'
-    # It captures content between '//' pairs while ensuring we get non-empty entries
-    matches = re.findall(r"//([^/]+)//", input_string)
-
-    # Iterate over the matches in steps of 3 to form each record
-    for i in range(0, len(matches), 3):
-        # Ensure there's a complete set of components for a record
-        if i + 2 < len(matches):
-            word = matches[i].strip()
-            phonetic_transcription = matches[i + 1].strip()
-            translation = matches[i + 2].strip()
-
-            # Create the record dictionary
-            record = {
-                "fields": {
-                    "word": word,
-                    "phonetic_transcription": phonetic_transcription,
-                    "translation": translation
-                }
-            }
-
-            # Append the dictionary to the records list
-            records.append(record)
-
-    # Wrap the records list in a dictionary
-    output_json = {"records": records}
-
-    return output_json
-
-# Example input string
-input_string = "//chris// //krɪs// //Krzysztof// //set off// //sɛt ɔf// //wyruszyć// //early// //ˈɜrli// //wcześnie// //in// //ɪn// //w// //the// //ðə// //morning// //ˈmɔrnɪŋ// //rano//"
-
-# Convert the string to JSON
-output_json = convert_to_json_v6_corrected(input_string)
-
-# Print the JSON structure
-import json
-print(json.dumps(output_json, indent=4, ensure_ascii=False))
+new_words_list={
+  "records": [
+    {
+      "fields": {
+        "keyword": "chris",
+        "transcription": "krɪs",
+        "translation": "Krzysztof",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "set off",
+        "transcription": "sɛt ɔf",
+        "translation": "wyruszyć",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "early",
+        "transcription": "ˈɜrli",
+        "translation": "wcześnie",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "in",
+        "transcription": "ɪn",
+        "translation": "w",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "morning",
+        "transcription": "ˈmɔrnɪŋ",
+        "translation": "ranek",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "towards",
+        "transcription": "təˈwɔrdz",
+        "translation": "w kierunku",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "the",
+        "transcription": "ði",
+        "translation": "",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "moon",
+        "transcription": "mun",
+        "translation": "księżyc",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "he",
+        "transcription": "hi",
+        "translation": "on",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "knew",
+        "transcription": "nju",
+        "translation": "wiedział",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "that",
+        "transcription": "ðæt",
+        "translation": "że",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "going",
+        "transcription": "ˈɡoʊɪŋ",
+        "translation": "idąc",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "there",
+        "transcription": "ðɛr",
+        "translation": "tam",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "will",
+        "transcription": "wɪl",
+        "translation": "będzie",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "be",
+        "transcription": "bi",
+        "translation": "być",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    },
+    {
+      "fields": {
+        "keyword": "exciting",
+        "transcription": "ɪkˈsaɪtɪŋ",
+        "translation": "ekscytujące",
+        "study_status": "---",
+        "translation_extended": "",
+        "user": "slawek",
+        "no_of_tries": 0,
+        "group": "general"
+      }
+    }
+  ]
+}

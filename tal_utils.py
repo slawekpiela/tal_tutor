@@ -1,6 +1,8 @@
 import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, deepl, nltk
 import pandas as pd
 import streamlit as st
+
+import sandbox
 from configuration import whereby_api_key, tiny_api_key, assistant_id3, api_deepl
 from moviepy.editor import VideoFileClip
 from datetime import timedelta, datetime
@@ -343,21 +345,23 @@ def get_last_recording_id():  # whereby last recording ID
 
 
 def save_new_words_to_airtable(data_to_save):
-    data_to_save = {"records": data_to_save}
-    st.write('passed to be saved and now wrapped: ', data_to_save)
-    airtable = Airtable(base_id, table_dictionary, airtable_token)
-    if data_to_save is None or 'records' not in data_to_save:
-        st.write('Data to save is None or missing "records" key.')
+    st.write('saving',data_to_save)
+    if not data_to_save or 'records' not in data_to_save:
         return  # Exit the function if data_to_save is None or doesn't contain 'records'
+
+        # Debug: Inspect the first item to ensure it has the expected structure
+    if data_to_save['records']:
+        first_record = data_to_save['records'][0]
 
     airtable = Airtable(base_id, table_dictionary, airtable_token)
 
     for record in data_to_save['records']:
-        if record is None:
-            st.write('none caught')
-        else:
+        # Add a check to ensure each record has the expected 'fields' key
+        if 'fields' not in record:
+            st.write('Record missing "fields" key:', record)
+            continue  # Skip records not matching the expected format
+
             response = airtable.insert(record['fields'])
-            # st.write('saving', response)
 
     return
 
@@ -379,21 +383,40 @@ def prepare_new_words_list(transcbd_text):
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
 
-    new_word_list_edited = display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid
-    save_new_words_to_airtable(new_word_list_edited)  # save to airtable
+    # display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid\
+    # save_new_words_to_airtable(new_words_list)  # save to airtable
     # save to airtable
-    return new_words_list
+    return new_words_list, is_set_full
 
 
 def strip_of_duplicates(data_structure):
-    # st.write('data structure to make uniqe', data_structure)
-    # Use list comprehension with enumerate to filter out duplicates
-    records_list = data_structure['records']
-    unique_records = [i for n, i in enumerate(records_list) if i not in records_list[n + 1:]]
+    seen_pairs = set()
+    unique_records = []
+
+    for record in data_structure['records']:
+        # Extract keyword and translation from the record
+        keyword = record['fields']['keyword']
+        translation = record['fields']['translation']
+        pair = (keyword, translation)  # Create a tuple to represent the pair
+
+        # Check if the pair is unique
+        if pair not in seen_pairs:
+            seen_pairs.add(pair)  # Mark this pair as seen
+            unique_records.append(record)  # Add the record to the list of unique records
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records
-    # st.write('uniqe data structure', data_structure)
+    st.write('uniqe record',unique_records)
+    st.write('data_str:', data_structure['records'])
+
+    # # st.write('data structure to make uniqe', data_structure)
+    # # Use list comprehension with enumerate to filter out duplicates
+    # records_list = data_structure['records']
+    # unique_records = [i for n, i in enumerate(records_list) if i not in records_list[n + 1:]]
+    #
+    # # Update the original dictionary with the list of unique records
+    # data_structure['records'] = unique_records
+    # # st.write('uniqe data structure', data_structure)
     return data_structure
 
 
@@ -559,64 +582,21 @@ def get_from_airtable():
 def display_json_in_a_grid(new_words_list, is_set_full):
     if is_set_full:
         records_list = new_words_list['records']
-        original_dataframe = pd.DataFrame([record['fields'] for record in records_list])
+        st.write('set full')
+        # Create a DataFrame from the list of dictionaries
+        df = pd.DataFrame([record['fields'] for record in records_list])
 
-        # Function to display the editable grid and process updates
-        def display_editable_grid(dataframe):
-            # Create a copy of the dataframe for the editable grid
-            editable_dataframe = dataframe[['keyword', 'transcription', 'translation']].copy()
+        # Specifying columns to display
+        # For example, to display only 'word' and 'translation'
+        selected_columns = ['keyword', 'transcription', 'translation']
+        filtered_df = df[selected_columns]
 
-            # Configure the editable grid
-            gb = GridOptionsBuilder.from_dataframe(editable_dataframe)
-            gb.configure_grid_options(domLayout='normal')
-            gb.configure_columns(['keyword', 'transcription', 'translation'], editable=True)
-            grid_options = gb.build()
-
-            # Display the editable AgGrid and return the grid response
-            grid_response = AgGrid(
-                editable_dataframe,
-                gridOptions=grid_options,
-                update_mode=GridUpdateMode.MODEL_CHANGED,
-                fit_columns_on_grid_load=True
-            )
-
-            return grid_response
-
-        # Display the editable grid and capture the response
-        grid_response = display_editable_grid(original_dataframe)
-
-        # Add a 'Save' button to apply changes from the editable grid
-        if st.button('Save Changes'):
-            # Extract the updated data from the grid response
-            updated_data = pd.DataFrame(grid_response['data'])
-
-            # Replace the original dataframe sections with the updated data
-            for col in ['keyword', 'transcription', 'translation']:
-                original_dataframe[col] = updated_data[col]
-            st.write('b4 saving', original_dataframe)
-            return original_dataframe
+        # Display in AG Grid
+        st.title("New vocabulary")
+        AgGrid(filtered_df)
     else:
-        st.write('No new words')
-
-
-# THIS WORKS ANDIS NOT EDITABLE
-# if is_set_full:
-#     records_list = new_words_list['records']
-#     st.write('set full')
-#     # Create a DataFrame from the list of dictionaries
-#     df = pd.DataFrame([record['fields'] for record in records_list])
-#
-#     # Specifying columns to display
-#     # For example, to display only 'word' and 'translation'
-#     selected_columns = ['keyword', 'transcription', 'translation']
-#     filtered_df = df[selected_columns]
-#
-#     # Display in AG Grid
-#     st.title("New vocabulary")
-#     AgGrid(filtered_df)
-# else:
-#     st.write('no new words')
-# return
+        st.write('no new words')
+    return
 
 
 def convert_to_json(input_string):

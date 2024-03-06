@@ -58,15 +58,16 @@ try:  # uploading the files
 
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
 
+
+
         text = transcribe_any_file_type(
             file_path)  # check file type and convert to mp3 if needed and return transcribed text. result is transcribed text
 
-        list_of_new_words = prepare_new_words_list(
+        new_words_list, is_set_full = prepare_new_words_list(
             text)  # result text is list with translations and create json cleaned to ascii
 
-        #display_json_in_a_grid(list_of_new_words)  # populate the grid
-
-       #save_new_words_to_airtable(list_of_new_words) # save to airtable
+        display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid\
+        save_new_words_to_airtable(new_words_list)  # save to airtable
 
 
 

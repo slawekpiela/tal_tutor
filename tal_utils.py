@@ -185,6 +185,7 @@ def transcribe_any_file_type(file_path):
     move_file_to_repo(file_path)
     return 'unknown'
 
+
 @timing_decorator
 def convert_pdf_to_txt(file):
     doc = fitz.open(file)
@@ -200,6 +201,7 @@ def convert_pdf_to_txt(file):
         f.write(text)
 
     return text, text_file_name
+
 
 @timing_decorator
 def extract_audio(file):  # get video file and save audio in /data directory and return audio file as object 'audio'
@@ -350,6 +352,7 @@ def get_last_recording_id():  # whereby last recording ID
     else:
         return "error"
 
+
 @timing_decorator
 def save_new_words_to_airtable(data_to_save):
     # st.write('saving', data_to_save)
@@ -379,15 +382,18 @@ def prepare_new_words_list(transcbd_text):
     sentences = parse_text_to_sentences(transcbd_text)  # rozbijamy na zdania i dostajemy listę zdan 'sentences'
 
     print('num of sentences: ', len(sentences), 'sentences: ', sentences)
-    #TO BE DONE: Purge of sentences comprised entirely of words already in airtable
-    sentences_purged=purge_text_of_sentences_already_known(sentences)
+    # TO BE DONE: Purge of sentences comprised entirely of words already in airtable
+    sentences_purged = purge_text_of_sentences_already_known(sentences)
     # translate and place translation in list_s
     translated_text = run_text_through_llm(sentences)
-    # st.write('translated tex:', translated_text)
-    st.write('text after translation', translated_text)
-    print('translated: ', translated_text)
-    text_converted_to_json = convert_to_json(translated_text)  # from llm to structured data
-    st.write('text converted to json ', text_converted_to_json)
+    triplets= split_into_triplets(translated_text)
+
+    # with open('data/translated_text.txt', 'w') as file:
+    #     file.write(triplets)
+
+    text_converted_to_json = create_records_from_triplets(triplets)  # from llm to structured data
+    # st.write('text converted to json ', text_converted_to_json)
+
     text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
@@ -397,8 +403,9 @@ def prepare_new_words_list(transcbd_text):
     # save to airtable
     return new_words_list, is_set_full
 
+
 @timing_decorator
-def strip_of_duplicates(data_structure): # new words that repeat themselves in the text are purged
+def strip_of_duplicates(data_structure):  # new words that repeat themselves in the text are purged
     seen_pairs = set()
     unique_records = []
 
@@ -419,18 +426,25 @@ def strip_of_duplicates(data_structure): # new words that repeat themselves in t
     # st.write('data_str:', data_structure['records'])
 
     return data_structure
-def purge_text_of_sentences_already_known(sentences): # sentences with words that already are in airtable are purged before passing to LLM
 
+
+def purge_text_of_sentences_already_known(
+        sentences):  # sentences with words that already are in airtable are purged before passing to LLM
 
     pass
+
 
 @timing_decorator
 def run_text_through_llm(sentences):
     list_s = ''  # list to store results
     sentence_group = []  # Temporary storage for accumulating sentences
     sentences_batch_size = 3  # number of sentences that will be passed to LLM for translation
+    num_of_sentences = len(sentences)
+    counter = 0
 
     for index, sentence in enumerate(sentences, start=1):
+        counter = counter + 1
+        print('translating ', counter, 'batch of ', num_of_sentences)
         # Assume detect_language is a function that determines the language of the sentence
         # and returns a language code, with 'en' for English for example
         lang_code = detect_language(sentence)  # determine the language. and eliminate sentences shorter than 5 chars
@@ -458,21 +472,23 @@ def run_text_through_llm(sentences):
     st.write('list_s:', list_s)
     return list_s
 
+
 @timing_decorator
 def process_sentence_group(sentence_group):
     # Join the sentences for the prompt
 
-    print('translating: ', len(sentence_group), ' ', sentence_group)
+    # print('translating: ', len(sentence_group), ' ', sentence_group)
 
-    joined_sentences = ' '.join(sentence_group) # pull form list into string
+    joined_sentences = ' '.join(sentence_group)  # pull form list into string
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
     instruction = f"Use text between [START] and [END] List words in this format:  first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language then '<<' Here is the text: {prompt}"
 
     result_text = query_no_assist(instruction)
-    print('raw from llm: ', result_text)
+    # print('raw from llm: ', result_text)
 
-    return result_text #we get list of triplets (word/transcription/translation) separated by: >>
+    return result_text  # we get list of triplets (word/transcription/translation) separated by: >>
+
 
 @timing_decorator
 def parse_text_to_sentences(text):
@@ -508,6 +524,8 @@ def clean_up_text_translated(ctext):
 
 def get_wikipedia_entry_in_language(title, language):
     pass
+
+
 #
 #
 # wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
@@ -547,6 +565,7 @@ def detect_language(source_text):
     else:
         return '11'  # returnng '11' will effectively make the system pass on this sentence
 
+
 # @timing_decorator
 # def pull_data_from_airtable():
 #     airtable_records = get_from_airtable()  # Pull data from Airtable
@@ -581,12 +600,14 @@ def substract_airtable_from_translation(new_words_list):
     # st.write('this is returned from substract form airtable', new_words_list)
     return new_words_list, is_set_full
 
+
 @timing_decorator
 def get_from_airtable():
     a = Airtable(base_id, table_dictionary, airtable_token)
     airtable_records = a.get_all()
 
     return airtable_records
+
 
 @timing_decorator
 def display_json_in_a_grid(new_words_list, is_set_full):
@@ -600,13 +621,15 @@ def display_json_in_a_grid(new_words_list, is_set_full):
         # For example, to display only 'word' and 'translation'
         selected_columns = ['keyword', 'transcription', 'translation']
         filtered_df = df[selected_columns]
-
+        with open('data/grid_text.txt', 'w') as file:
+            file.write(str(filtered_df))
         # Display in AG Grid
         st.title("New vocabulary")
         AgGrid(filtered_df)
     else:
         st.write('no new words')
     return
+
 
 @timing_decorator
 def convert_to_json(input_string):
@@ -639,6 +662,8 @@ def convert_to_json(input_string):
                 current_record = []  # Reset for the next record
 
     output_json = {"records": records}
+    with open('data/formated_text.txt', 'w') as file:
+        file.write(str(output_json))
     return output_json
 
 
@@ -675,3 +700,50 @@ def is_file_bigger_than_50mb(file_path):
 
     # Check if the file size is greater than 50MB
     return file_size_mb
+
+def is_ascii_letters_and_space(s):
+    return all(ord(char) == 32 or 97 <= ord(char) <= 122 for char in s)
+
+def split_into_triplets(file_content):
+    # Splitting the content based on '>>'
+    parts = [part.strip() for part in file_content.split(">>") if part.strip()]
+
+    triplets = []
+    i = 0
+    while i < len(parts) - 2:
+        first = parts[i]
+        second = parts[i + 1]
+        third_raw = parts[i + 2]
+
+        # Check if the third part ends with '<<' or should include up to the next '>>' (end with '>>')
+        if '<<' in third_raw:
+            third = third_raw.split('<<')[0]
+        else:
+            third = third_raw  # Include everything if there's no '<<', assuming it might end with '>>' implicitly
+
+        if is_ascii_letters_and_space(first):
+            triplets.append((first, second, third))
+            i += 3  # Move to the next part of the sequence correctly
+        else:
+            i += 1  # Adjust the pointer to treat the next part as the first of a new triplet
+
+
+    return triplets
+
+def create_records_from_triplets(triplets): # make triplets a json wrpped in 'records'
+    records = {
+        'records': [
+            {'fields': {
+                'keyword': word,
+                'transcription': transcription,
+                'translation': translation + '<<',
+                'study_status': '---',
+                'translation_extended': '',
+                'user': 'slawek',
+                'no_of_tries': 0,
+                'group': 'general'
+            }} for word, transcription, translation in triplets
+        ]
+    }
+    return records
+

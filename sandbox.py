@@ -1,244 +1,97 @@
-from airtable import Airtable
-from configuration import base_id, table_dictionary, airtable_token
+import json
 import pandas as pd
-import streamlit as st
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
-
-new_words_list = {
-    "records": [
-        {
-            "fields": {
-                "keyword": "chris",
-                "transcription": "krɪs",
-                "translation": "Krzysiek",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "set off",
-                "transcription": "sɛt ɔf",
-                "translation": "wyruszyć",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "early",
-                "transcription": "ˈɜrli",
-                "translation": "wcześnie",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "in",
-                "transcription": "ɪn",
-                "translation": "w",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "morning",
-                "transcription": "ˈmɔrnɪŋ",
-                "translation": "ranek",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "towards",
-                "transcription": "təˈwɔrdz",
-                "translation": "w kierunku",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "the",
-                "transcription": "ðə",
-                "translation": "(przyimek określony)",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "moon",
-                "transcription": "mun",
-                "translation": "księżyc",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "he",
-                "transcription": "hi",
-                "translation": "on",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "knew",
-                "transcription": "nju",
-                "translation": "wiedział",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "that",
-                "transcription": "ðæt",
-                "translation": "że",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "going",
-                "transcription": "ˈɡoʊɪŋ",
-                "translation": "idąc",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "there",
-                "transcription": "ˈðɛr",
-                "translation": "tam",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "will",
-                "transcription": "wɪl",
-                "translation": "będzie",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "be",
-                "transcription": "bi",
-                "translation": "być",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        },
-        {
-            "fields": {
-                "keyword": "exciting",
-                "transcription": "ɪkˈsaɪtɪŋ",
-                "translation": "ekscytujące",
-                "study_status": "---",
-                "translation_extended": "",
-                "user": "slawek",
-                "no_of_tries": 0,
-                "group": "general"
-            }
-        }
-    ]
-}
-
-# Convert new_words_list to a pandas DataFrame
-records_list = new_words_list['records']
-original_dataframe = pd.DataFrame([record['fields'] for record in records_list])
+from st_aggrid import AgGrid
 
 
-def display_editable_grid(df):
-    # Copy the DataFrame to include only the columns to display in the grid
-    editable_dataframe = df[['keyword', 'transcription', 'translation']].copy()
+file_content = """
+>>or>>ɔːr>>lub>><<
+>>disease>>dɪˈziːz>>choroby<<>>and>>ænd>>i potem powiedzieć, że to ja mam moc zniszczyć Vajjianów i to ja mam moc zniszczyć Vajjianów i potem powiedzieć, że król Lord Ajatasattu chce zaatakować Vajjianów<<>>he>>hiː>>on<<
+>>will>>wɪl>>będzie<<
+>>to>>tuː>>żeby<<
+>>leave>>liːv>>opuścić<<>>so>>so>>więc<<
+>>having>>ˈhævɪŋ>>mając<<
+>>when>>wen>>kiedy<<
+>>rain>>reɪn>>deszcz<<
+>>doth>>dʌð>>czyni<<
+>>fall>>fɔːl>>spada<<
+>>so>>so>>tak>><<
+>>he>>hiː>>on/ono>><<
+>>compares>>kəmˈpɛərz>>porównuje>><<
+>>himself>>hɪmˈsɛlf>>siebie>><<
 
-    # Configure the editable grid
-    gb = GridOptionsBuilder.from_dataframe(editable_dataframe)
-    gb.configure_grid_options(domLayout='normal')
-    gb.configure_columns(['keyword', 'transcription', 'translation'], editable=True)
+"""
 
-    # Build and display the grid
-    grid_options = gb.build()
-    grid_response = AgGrid(
-        editable_dataframe,
-        gridOptions=grid_options,
-        update_mode=GridUpdateMode.MODEL_CHANGED,
-        fit_columns_on_grid_load=True
-    )
 
-    return grid_response
+def read_file_content(file_path):
+    with open(file_path, 'r', encoding='utf-8') as file:
+        return file.read()
 
-# Display the editable grid and capture the response
-grid_response = display_editable_grid(original_dataframe)
 
-# Add a 'Save' button to apply changes from the editable grid
-if st.button('Save Changes'):
-    # Extract the updated data from the grid response
-    updated_data = pd.DataFrame(grid_response['data'])
+# Function to check if a string contains only ASCII letters a-z and space
+def is_ascii_letters_and_space(s):
+    return all(ord(char) == 32 or 97 <= ord(char) <= 122 for char in s)
 
-    # Update the original dataframe with the changes
-    for index, row in updated_data.iterrows():
-        original_dataframe.loc[original_dataframe['keyword'] == row['keyword'], ['transcription', 'translation']] = row[['transcription', 'translation']]
 
-    st.success('Changes saved successfully!')
+def split_into_triplets(file_content):
+    # Splitting the content based on '>>'
+    parts = [part.strip() for part in file_content.split(">>") if part.strip()]
 
-    # Display the original dataframe with updates
-    st.write("Original Dataset with Edited Rows:", original_dataframe)
+    triplets = []
+    i = 0
+    while i < len(parts) - 2:
+        first = parts[i]
+        second = parts[i + 1]
+        third_raw = parts[i + 2]
+
+        # Check if the third part ends with '<<' or should include up to the next '>>' (end with '>>')
+        if '<<' in third_raw:
+            third = third_raw.split('<<')[0]
+        else:
+            third = third_raw  # Include everything if there's no '<<', assuming it might end with '>>' implicitly
+
+        if is_ascii_letters_and_space(first):
+            triplets.append((first, second, third))
+            i += 3  # Move to the next part of the sequence correctly
+        else:
+            i += 1  # Adjust the pointer to treat the next part as the first of a new triplet
+
+
+    return triplets
+
+
+def create_records_from_triplets(triplets):
+    records = {
+        'records': [
+            {'fields': {
+                'keyword': word,
+                'transcription': transcription,
+                'translation': translation + '<<',
+                'study_status': '---',
+                'translation_extended': '',
+                'user': 'slawek',
+                'no_of_tries': 0,
+                'group': 'general'
+            }} for word, transcription, translation in triplets
+        ]
+    }
+    return records
+
+
+file_path = 'data/translated_text.txt'
+file_content = read_file_content(file_path)
+tri = split_into_triplets(file_content)
+print(tri)
+print('\n\n\n\n\\')
+
+records = create_records_from_triplets(tri)
+print(records)
+
+with open('data/new_json', 'w', encoding='utf-8') as file:
+    json.dump(records, file, ensure_ascii=False, indent=4)
+
+records = records['records']
+df = pd.DataFrame([record['fields'] for record in records])
+selected_columns = ['keyword', 'transcription', 'translation', 'no_of_tries']
+filtered_df = df[selected_columns]
+
+AgGrid(filtered_df)

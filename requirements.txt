@@ -1,7 +1,7 @@
 streamlit_float==0.3.2
 uuid==1.30
 openai==1.7.2
-streamlit==1.30.0
+streamlit==1.32.0
 tomli==2.0.1
 moviepy
 PyMuPDF

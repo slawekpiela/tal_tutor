@@ -47,3 +47,5 @@ api_sa_secret=_config['APISA']['api_sa_secret']
 whereby_api_key=_config['WHEREBY']['api_key']
 tiny_api_key=_config['TinyURL']['tiny_api_key']
 api_deepl =_config['Deepl']['api_deepl']
+
+api_detect_language=_config["Detectlanguage"]["api_detect_language"]

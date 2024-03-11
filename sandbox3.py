@@ -1,48 +1,38 @@
 import re
-input_string = """
->> chris
->> /krɪs/
->> Krzysztof
->> set off
->> /sɛt ɔf/
->> wyruszyć
-"""
-records = []
 
-# Adjusted regular expression to match the new format
-# It captures content after '>>' and ensures we get non-empty entries
-matches = re.findall(r'>>\s*(.*)', input_string)
+def convert_to_json(input_string):
+    records = []
+    current_record = []
 
-# Iterate over the matches in steps of 3 to form each record
-for i in range(0, len(matches), 3):
-    # Ensure there's a complete set of components for a record
-    if i + 2 < len(matches):
-        word = matches[i].strip()
-        phonetic_transcription = matches[i + 1].strip()
-        translation = matches[i + 2].strip()
+    # It captures content after '>>' and ensures we get non-empty entries
+    matches = re.findall(r'>>\s*(.*?)(?=\s*>>|$)', input_string, flags=re.DOTALL)
 
-        # Create the record dictionary
-        if len(word) > 1: # Safeguard against empty entries
-            record = {
-                "fields": {
-                    "word": word,
-                    "phonetic_transcription": phonetic_transcription,
-                    "translation": translation,
-                    "study_status": '---',
-                    "translation_extended": "",
-                    "user": 'slawek',
-                    "no_of_tries": 0,
-                    "group": 'general'
+    for match in matches:
+        stripped_match = match.strip()
+        if stripped_match:  # Check if the match is not just whitespace
+            current_record.append(stripped_match)
+            # Check if we have a complete record (word, transcription, translation)
+            if len(current_record) == 3:
+                word, transcription, translation = current_record
+                record = {
+                    "fields": {
+                        "keyword": word,
+                        "transcription": transcription,
+                        "translation": translation,
+                        "study_status": '---',
+                        "translation_extended": "",
+                        "user": 'slawek',
+                        "no_of_tries": 0,
+                        "group": 'general'
+                    }
                 }
-            }
+                records.append(record)
+                current_record = []  # Reset for the next record
 
-            # Append the dictionary to the records list
-            records.append(record)
-        else:
-            print('Something is not right; ', word, ' ', input_string)
+    output_json = {"records": records}
+    return output_json
 
-# Example usage
-
-print(records)
-# Assuming input_string is your given string
-# Execute the code to create records
+# Test with your input data
+input_string = ">>respect>>rɪˈspɛkt>>szacunek >>of>>ʌv>>z>>doctrines>>ˈdɑktrɪnz>>doktryny>>in>>ɪn>>w>>other>>ˈʌðər>>inny>>words>>wɜrdz>>słowa"
+output_json = convert_to_json(input_string)
+print('my output: ',output_json)

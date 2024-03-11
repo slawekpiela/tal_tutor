@@ -1,17 +1,20 @@
-import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, deepl, nltk
+import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, detectlanguage, nltk
 import pandas as pd
 import streamlit as st
-
-import sandbox
-from configuration import whereby_api_key, tiny_api_key, assistant_id3, api_deepl
+from pydub import AudioSegment
+import streamlit as st
+from configuration import whereby_api_key, tiny_api_key, assistant_id3, base_id, table_dictionary, airtable_token, \
+    api_detect_language
 from moviepy.editor import VideoFileClip
 from datetime import timedelta, datetime
 from query_openai import query_model
 from airtable import Airtable
-from configuration import base_id, table_dictionary, airtable_token
+from configuration import base_id, table_dictionary, airtable_token, api_detect_language
 from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
 from query_openai_no_assistant import query_no_assist
+
+detectlanguage.configuration.api_key = api_detect_language
 
 
 def timing_decorator(func):
@@ -22,6 +25,7 @@ def timing_decorator(func):
         end = time.time()
         total_time = end - start
         print(f"{func.__name__} took {total_time:.4f} seconds to run.")
+        st.sidebar.write(f"{func.__name__} took {total_time:.4f} seconds to run.")
         return result
 
     return wrapper
@@ -117,19 +121,22 @@ def download_last_recording(url):  # download last whereby recording (requires A
     return output_path
 
 
+@timing_decorator
 def transcribe_local(file):
     st.write('transcribing')
-    model = whisper.load_model("medium")
+    model = whisper.load_model("large")
     result = model.transcribe(file)
 
     return (result["text"])
 
 
+@timing_decorator
 def transcribe_any_file_type(file_path):
     file_type = magic.from_file(file_path, mime=True)
+    st.write(file_type)
     old_file_path = file_path
 
-    if file_type.startswith('audio'):
+    if file_type.startswith('audio') or file_type.startswith('application/octet-stream'):
         st.write('Audio file detected')
         file_path = check_and_convert_to_mp3(file_path)  # make sure mp3 is saved for transcription
         trnsc_txt = f'{transcribe_local(file_path)}.'  # get transcription and add dot at the end to aviod last sentence to be missed whlie parsing to sentences
@@ -168,17 +175,17 @@ def transcribe_any_file_type(file_path):
         with open(file_path, 'r') as file:
             trnsc_txt = f'{file.read()}.'  # dad dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
-        move_file_to_repo(file_path)  # cleanup
-        if old_file_path != file_path:
-            os.remove(old_file_path)
+    move_file_to_repo(file_path)  # cleanup
+    if old_file_path != file_path:
+        os.remove(old_file_path)
 
-        return trnsc_txt
+    return trnsc_txt
 
     st.write(f"Detected MIME type: {file_type}")
     move_file_to_repo(file_path)
     return 'unknown'
 
-
+@timing_decorator
 def convert_pdf_to_txt(file):
     doc = fitz.open(file)
     text = ""
@@ -194,7 +201,7 @@ def convert_pdf_to_txt(file):
 
     return text, text_file_name
 
-
+@timing_decorator
 def extract_audio(file):  # get video file and save audio in /data directory and return audio file as object 'audio'
     try:
         output_directory = 'data'
@@ -343,9 +350,9 @@ def get_last_recording_id():  # whereby last recording ID
     else:
         return "error"
 
-
+@timing_decorator
 def save_new_words_to_airtable(data_to_save):
-    st.write('saving',data_to_save)
+    # st.write('saving', data_to_save)
     if not data_to_save or 'records' not in data_to_save:
         return  # Exit the function if data_to_save is None or doesn't contain 'records'
 
@@ -358,10 +365,10 @@ def save_new_words_to_airtable(data_to_save):
     for record in data_to_save['records']:
         # Add a check to ensure each record has the expected 'fields' key
         if 'fields' not in record:
-            st.write('Record missing "fields" key:', record)
+            # st.write('Record missing "fields" key:', record)
             continue  # Skip records not matching the expected format
 
-            response = airtable.insert(record['fields'])
+        response = airtable.insert(record['fields'])
 
     return
 
@@ -369,16 +376,18 @@ def save_new_words_to_airtable(data_to_save):
 @timing_decorator
 def prepare_new_words_list(transcbd_text):
     transcbd_text = transcbd_text.lower()  # na małe litery (obsługa wyjątkow pźniej będzie zrobiona (Moon , Sun Ietc)
-    sentences = parse_text_to_sentences(transcbd_text)  # rozbijamy na zdania
+    sentences = parse_text_to_sentences(transcbd_text)  # rozbijamy na zdania i dostajemy listę zdan 'sentences'
 
     print('num of sentences: ', len(sentences), 'sentences: ', sentences)
-
+    #TO BE DONE: Purge of sentences comprised entirely of words already in airtable
+    sentences_purged=purge_text_of_sentences_already_known(sentences)
     # translate and place translation in list_s
     translated_text = run_text_through_llm(sentences)
     # st.write('translated tex:', translated_text)
-
+    st.write('text after translation', translated_text)
+    print('translated: ', translated_text)
     text_converted_to_json = convert_to_json(translated_text)  # from llm to structured data
-    # st.write('converte ', text_converted_to_json)
+    st.write('text converted to json ', text_converted_to_json)
     text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
@@ -388,8 +397,8 @@ def prepare_new_words_list(transcbd_text):
     # save to airtable
     return new_words_list, is_set_full
 
-
-def strip_of_duplicates(data_structure):
+@timing_decorator
+def strip_of_duplicates(data_structure): # new words that repeat themselves in the text are purged
     seen_pairs = set()
     unique_records = []
 
@@ -406,32 +415,28 @@ def strip_of_duplicates(data_structure):
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records
-    st.write('uniqe record',unique_records)
-    st.write('data_str:', data_structure['records'])
+    # st.write('uniqe record', unique_records)
+    # st.write('data_str:', data_structure['records'])
 
-    # # st.write('data structure to make uniqe', data_structure)
-    # # Use list comprehension with enumerate to filter out duplicates
-    # records_list = data_structure['records']
-    # unique_records = [i for n, i in enumerate(records_list) if i not in records_list[n + 1:]]
-    #
-    # # Update the original dictionary with the list of unique records
-    # data_structure['records'] = unique_records
-    # # st.write('uniqe data structure', data_structure)
     return data_structure
+def purge_text_of_sentences_already_known(sentences): # sentences with words that already are in airtable are purged before passing to LLM
 
 
+    pass
+
+@timing_decorator
 def run_text_through_llm(sentences):
     list_s = ''  # list to store results
     sentence_group = []  # Temporary storage for accumulating sentences
     sentences_batch_size = 3  # number of sentences that will be passed to LLM for translation
 
     for index, sentence in enumerate(sentences, start=1):
-        # Assume deepl_translate is a function that determines the language of the sentence
-        # and returns a language code, with 'en' for English.
-        lang_code = deepl_translate(sentence, 'pl')[0]  # determine the language.(we pass to llm only eEnglish)
+        # Assume detect_language is a function that determines the language of the sentence
+        # and returns a language code, with 'en' for English for example
+        lang_code = detect_language(sentence)  # determine the language. and eliminate sentences shorter than 5 chars
         sentence = clean_up_text_to_ascii(sentence)  # clen up to make sure onbly ascii chars are present
 
-        if lang_code == 'en' and len(sentence) > 3:  # ignore sentences shorter than 3 chars
+        if lang_code == 'en':  # ignore sentences shorter than 3 chars
 
             # print(f"This is sentence number {index} :  {sentence}  sentence len: {len(sentence)}")
             sentence_group.append(sentence)  # append temporary storage
@@ -439,37 +444,37 @@ def run_text_through_llm(sentences):
             # Process the group if it has reached the specified number of sentences
             if len(sentence_group) >= sentences_batch_size:
                 # Function to process the accumulated sentences
-                result_text = process_sentence_group(sentence_group, list_s)  # pass to LLM
+                result_text = process_sentence_group(sentence_group)  # pass to LLM
                 list_s = list_s + result_text
                 sentence_group = []  # Reset for next group (rsult is placed in list_s variable
 
     # After going through all sentences, check if there's an incomplete group left
     if sentence_group:  # This will be True if sentence_group is not empty
-        result_text = process_sentence_group(sentence_group, list_s)
+        result_text = process_sentence_group(sentence_group)
         result_text = clean_up_text_translated(result_text)
         # correct transcription with : https://easypronunciation.com/en/pricing
         list_s = list_s + result_text
 
+    st.write('list_s:', list_s)
     return list_s
 
-
-def process_sentence_group(sentence_group, list_s):
+@timing_decorator
+def process_sentence_group(sentence_group):
     # Join the sentences for the prompt
 
     print('translating: ', len(sentence_group), ' ', sentence_group)
 
-    joined_sentences = ' '.join(sentence_group)
+    joined_sentences = ' '.join(sentence_group) # pull form list into string
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
-    instruction = f"List absolutely all words in the text between [START] and [END]. Always keep phrasal verbs together. Ignore proper names. List words in this format: first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language. Here is the text: {prompt}"
+    instruction = f"Use text between [START] and [END] List words in this format:  first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language then '<<' Here is the text: {prompt}"
 
     result_text = query_no_assist(instruction)
-    # print('raw from llm: ', result_text)
-    # st.write('raw from llm: ', result_text)
+    print('raw from llm: ', result_text)
 
-    return result_text
+    return result_text #we get list of triplets (word/transcription/translation) separated by: >>
 
-
+@timing_decorator
 def parse_text_to_sentences(text):
     print('to be parsed:', text)
     nltk.download('punkt')
@@ -484,10 +489,16 @@ def parse_text_to_sentences(text):
 def clean_up_text_to_ascii(ctext):
     ctext = ''.join(
         char for char in ctext if
-        (65 <= ord(char) <= 90) or (97 <= ord(char) <= 122) or ord(char) == 32)  # leave only letter and space
+        (65 <= ord(char) <= 90) or
+        (97 <= ord(char) <= 122) or
+        ord(char) == 32 or  # leave only letters and space
+        char == '\n'  # include this line to remove '\n' explicitly
+    )
+    ctext = ctext.replace('\n', '')  # Remove '\n' from the text
     return ctext
 
 
+@timing_decorator
 def clean_up_text_translated(ctext):
     ctext = ''.join(
         char for char in ctext if
@@ -497,8 +508,8 @@ def clean_up_text_translated(ctext):
 
 def get_wikipedia_entry_in_language(title, language):
     pass
-
-
+#
+#
 # wiki_wiki = wikipediaapi.Wikipedia(language='en', user_agent='slawek.piela@koios-mail.pl')
 # page_py = wiki_wiki.page(title)
 #
@@ -524,25 +535,25 @@ def get_wikipedia_entry_in_language(title, language):
 # else:
 #     print(f"No page found for language code: {language}")
 #
-# # to call this function use:   get_wikipedia_entry_in_language(text, "pl") where PL is language we translate to.
+
+# to call this function use:   get_wikipedia_entry_in_language(text, "pl") where PL is language we translate to.
 
 
-def deepl_translate(source_text, target_lang):
-    # source_text = 'This is sample text.'  # przeplatany różnymi językami. Merci boque. And English again'
-    translator = deepl.Translator(api_deepl)
-    result = translator.translate_text(source_text, target_lang=target_lang)
+def detect_language(source_text):
+    if len(source_text) > 5:
+        lang_code = detectlanguage.simple_detect(source_text)
 
-    lang_code = result.detected_source_lang.lower()
-    translation = result.text
-    return lang_code, translation
+        return lang_code
+    else:
+        return '11'  # returnng '11' will effectively make the system pass on this sentence
 
+# @timing_decorator
+# def pull_data_from_airtable():
+#     airtable_records = get_from_airtable()  # Pull data from Airtable
+#
+#     return airtable_records
 
-def pull_data_from_airtable():
-    airtable_records = get_from_airtable()  # Pull data from Airtable
-
-    return airtable_records
-
-
+@timing_decorator
 def substract_airtable_from_translation(new_words_list):
     airtable = Airtable(base_id, table_dictionary, airtable_token)
 
@@ -570,15 +581,14 @@ def substract_airtable_from_translation(new_words_list):
     # st.write('this is returned from substract form airtable', new_words_list)
     return new_words_list, is_set_full
 
-
+@timing_decorator
 def get_from_airtable():
     a = Airtable(base_id, table_dictionary, airtable_token)
-
     airtable_records = a.get_all()
 
     return airtable_records
 
-
+@timing_decorator
 def display_json_in_a_grid(new_words_list, is_set_full):
     if is_set_full:
         records_list = new_words_list['records']
@@ -598,24 +608,21 @@ def display_json_in_a_grid(new_words_list, is_set_full):
         st.write('no new words')
     return
 
-
+@timing_decorator
 def convert_to_json(input_string):
     records = []
+    current_record = []
 
-    # Adjusted regular expression to match the new format
     # It captures content after '>>' and ensures we get non-empty entries
     matches = re.findall(r'>>\s*(.*?)(?=\s*>>|$)', input_string, flags=re.DOTALL)
 
-    # Iterate over the matches in steps of 3 to form each record
-    for i in range(0, len(matches), 3):
-        # Ensure there's a complete set of components for a record
-        if i + 2 < len(matches):
-            word = matches[i].strip()
-            transcription = matches[i + 1].strip()
-            translation = matches[i + 2].strip()
-
-            # Create the record dictionary
-            if len(word) > 1:  # Safeguard against empty entries
+    for match in matches:
+        stripped_match = match.strip()
+        if stripped_match:  # Check if the match is not just whitespace
+            current_record.append(stripped_match)
+            # Check if we have a complete record (word, transcription, translation)
+            if len(current_record) == 3:
+                word, transcription, translation = current_record
                 record = {
                     "fields": {
                         "keyword": word,
@@ -628,12 +635,43 @@ def convert_to_json(input_string):
                         "group": 'general'
                     }
                 }
-
-                # Append the dictionary to the records list
                 records.append(record)
-            else:
-                print('Something is not right; ', word, ' ', input_string)
+                current_record = []  # Reset for the next record
 
     output_json = {"records": records}
-
     return output_json
+
+
+def split_mp3(input_file, output_folder, chunk_size_mb):
+    # Load the MP3 file
+    audio = AudioSegment.from_mp3(input_file)
+
+    # Calculate the chunk size in bytes
+    chunk_size_bytes = chunk_size_mb * 1024 * 1024
+
+    # Calculate the number of chunks
+    num_chunks = len(audio) // chunk_size_bytes + 1
+
+    # Create the output folder if it doesn't exist
+    os.makedirs(output_folder, exist_ok=True)
+
+    # Split the audio into chunks
+    for i in range(num_chunks):
+        start = i * chunk_size_bytes
+        end = min((i + 1) * chunk_size_bytes, len(audio))
+        chunk = audio[start:end]
+
+        # Export the chunk to a new file
+        output_file = os.path.join(output_folder, f"chunk_{i + 1}.mp3")
+        chunk.export(output_file, format="mp3")
+
+
+def is_file_bigger_than_50mb(file_path):
+    # Get the size of the file in bytes
+    file_size_bytes = os.path.getsize(file_path)
+
+    # Convert bytes to megabytes
+    file_size_mb = file_size_bytes / (1024 * 1024)
+
+    # Check if the file size is greater than 50MB
+    return file_size_mb

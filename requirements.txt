@@ -6,9 +6,9 @@ tomli==2.0.1
 moviepy
 PyMuPDF
 wikipedia-api
-deepl
 nltk
 airtable-python-wrapper
+detectlanguage
 
 
 

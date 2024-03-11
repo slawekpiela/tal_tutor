@@ -1,4 +1,7 @@
-new_words_list={
+from airtable import Airtable
+from configuration import airtable_token, table_dictionary, base_id
+
+words={
   "records": [
     {
       "fields": {
@@ -194,3 +197,15 @@ new_words_list={
     }
   ]
 }
+
+a = Airtable(base_id, table_dictionary, airtable_token)
+airtable_records = a.get_all()
+for record in words['records']:
+  # Add a check to ensure each record has the expected 'fields' key
+  if 'fields' not in record:
+    # st.write('Record missing "fields" key:', record)
+    continue  # Skip records not matching the expected format
+
+  response = a.insert(record['fields'])
+  print('dodano', record['fields'], end='')
+print(airtable_records)

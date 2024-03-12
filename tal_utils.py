@@ -32,7 +32,7 @@ def timing_decorator(func):
 
 
 def save_uploaded_file(uploaded_file):
-    data_dir = 'data'
+    data_dir = 'data/'
     file_path = os.path.join(data_dir, uploaded_file.name)
     with open(file_path, "wb") as f:
         # uploaded_file.getvalue() is used for StringIO or BytesIO objects
@@ -133,11 +133,11 @@ def transcribe_local(file):
 @timing_decorator
 def transcribe_any_file_type(file_path):
     file_type = magic.from_file(file_path, mime=True)
-    st.write(file_type)
+    st.sidebar.write(file_type)
     old_file_path = file_path
 
     if file_type.startswith('audio') or file_type.startswith('application/octet-stream'):
-        st.write('Audio file detected')
+        st.sidebar.write('Audio file detected')
         file_path = check_and_convert_to_mp3(file_path)  # make sure mp3 is saved for transcription
         trnsc_txt = f'{transcribe_local(file_path)}.'  # get transcription and add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
@@ -148,7 +148,7 @@ def transcribe_any_file_type(file_path):
         return trnsc_txt  # return path of mp3
 
     elif file_type.startswith('video'):
-        st.write('Video file detected')
+        st.sidebar.write('Video file detected')
         file_path = extract_audio(file_path)  # extract and save mp3 file
         trnsc_txt = f'{transcribe_local(file_path)}.'  # get transcription and add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
@@ -159,7 +159,7 @@ def transcribe_any_file_type(file_path):
         return trnsc_txt  # return transcribed text
 
     elif file_type == 'application/pdf':
-        st.write('PDF file detected')
+        st.sidebar.write('PDF file detected')
         trnsc_txt, text_file_name = convert_pdf_to_txt(file_path)
         trnsc_txt = f'{trnsc_txt}.'  # add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
@@ -171,7 +171,7 @@ def transcribe_any_file_type(file_path):
 
     elif file_type.startswith('text'):
 
-        st.write('Text file detected')
+        st.sidebar.write('Text file detected')
         with open(file_path, 'r') as file:
             trnsc_txt = f'{file.read()}.'  # dad dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
@@ -181,7 +181,7 @@ def transcribe_any_file_type(file_path):
 
     return trnsc_txt
 
-    st.write(f"Detected MIME type: {file_type}")
+    st.sidebar.write(f"Detected MIME type: {file_type}")
     move_file_to_repo(file_path)
     return 'unknown'
 
@@ -383,21 +383,22 @@ def prepare_new_words_list(transcbd_text):
 
     print('num of sentences: ', len(sentences), 'sentences: ', sentences)
     # TO BE DONE: Purge of sentences comprised entirely of words already in airtable
-    sentences_purged = purge_text_of_sentences_already_known(sentences)
-    # translate and place translation in list_s
+    sentences_purged = purge_text_of_sentences_already_known(sentences)  # to be implemented later
+
     translated_text = run_text_through_llm(sentences)
-    triplets= split_into_triplets(translated_text)
+    triplets = split_into_triplets(translated_text)
 
     # with open('data/translated_text.txt', 'w') as file:
     #     file.write(triplets)
 
-    text_converted_to_json = create_records_from_triplets(triplets)  # from llm to structured data
+    text_converted_to_json = create_records_from_triplets(triplets)  # move words from llm to structured data
     # st.write('text converted to json ', text_converted_to_json)
 
     text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
+    st.write('stripped of duplicates in json', text_converted_to_json)
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
-
+    st.write('new_wors_list passed to save)', new_words_list)
     # display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid\
     # save_new_words_to_airtable(new_words_list)  # save to airtable
     # save to airtable
@@ -405,25 +406,27 @@ def prepare_new_words_list(transcbd_text):
 
 
 @timing_decorator
-def strip_of_duplicates(data_structure):  # new words that repeat themselves in the text are purged
-    seen_pairs = set()
+def strip_of_duplicates(data_structure):
+    print('\nStarting testing for duplicates')
+    seen_keywords = set()
     unique_records = []
 
     for record in data_structure['records']:
-        # Extract keyword and translation from the record
-        keyword = record['fields']['keyword']
-        translation = record['fields']['translation']
-        pair = (keyword, translation)  # Create a tuple to represent the pair
+        # Extract keyword and possibly modify the extraction method to remove spaces
+        keyword = clean_up_text_to_ascii_no_space(record['fields']['keyword'])
 
-        # Check if the pair is unique
-        if pair not in seen_pairs:
-            seen_pairs.add(pair)  # Mark this pair as seen
-            unique_records.append(record)  # Add the record to the list of unique records
+        print(f'Checking keyword: "{keyword}"')
+
+        # Check if the keyword has been seen before
+        if keyword not in seen_keywords:
+            seen_keywords.add(keyword)  # Mark this keyword as seen
+            unique_records.append(record)  # Add the record if the keyword is unique
+        else:
+            # Optionally, print the duplicate keyword for debugging or logging purposes
+            print(f'Duplicate keyword found and skipped: "{keyword}"')
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records
-    # st.write('uniqe record', unique_records)
-    # st.write('data_str:', data_structure['records'])
 
     return data_structure
 
@@ -466,10 +469,10 @@ def run_text_through_llm(sentences):
     if sentence_group:  # This will be True if sentence_group is not empty
         result_text = process_sentence_group(sentence_group)
         result_text = clean_up_text_translated(result_text)
-        # correct transcription with : https://easypronunciation.com/en/pricing
+        # for future use:correct transcription with : https://easypronunciation.com/en/pricing
         list_s = list_s + result_text
 
-    st.write('list_s:', list_s)
+    st.sidebar.write('list_s:', list_s)
     return list_s
 
 
@@ -503,6 +506,16 @@ def parse_text_to_sentences(text):
 
 
 def clean_up_text_to_ascii(ctext):
+    ctext = ''.join(
+        char for char in ctext if
+        (65 <= ord(char) <= 90) or
+        (97 <= ord(char) <= 122) or
+        ord(char) == 32 or  # leave only letters and space
+        char == '\n'  # include this line to remove '\n' explicitly
+    )
+    ctext = ctext.replace('\n', '')  # Remove '\n' from the text
+    return ctext
+def clean_up_text_to_ascii_no_space(ctext):
     ctext = ''.join(
         char for char in ctext if
         (65 <= ord(char) <= 90) or
@@ -631,78 +644,9 @@ def display_json_in_a_grid(new_words_list, is_set_full):
     return
 
 
-@timing_decorator
-def convert_to_json(input_string):
-    records = []
-    current_record = []
-
-    # It captures content after '>>' and ensures we get non-empty entries
-    matches = re.findall(r'>>\s*(.*?)(?=\s*>>|$)', input_string, flags=re.DOTALL)
-
-    for match in matches:
-        stripped_match = match.strip()
-        if stripped_match:  # Check if the match is not just whitespace
-            current_record.append(stripped_match)
-            # Check if we have a complete record (word, transcription, translation)
-            if len(current_record) == 3:
-                word, transcription, translation = current_record
-                record = {
-                    "fields": {
-                        "keyword": word,
-                        "transcription": transcription,
-                        "translation": translation,
-                        "study_status": '---',
-                        "translation_extended": "",
-                        "user": 'slawek',
-                        "no_of_tries": 0,
-                        "group": 'general'
-                    }
-                }
-                records.append(record)
-                current_record = []  # Reset for the next record
-
-    output_json = {"records": records}
-    with open('data/formated_text.txt', 'w') as file:
-        file.write(str(output_json))
-    return output_json
-
-
-def split_mp3(input_file, output_folder, chunk_size_mb):
-    # Load the MP3 file
-    audio = AudioSegment.from_mp3(input_file)
-
-    # Calculate the chunk size in bytes
-    chunk_size_bytes = chunk_size_mb * 1024 * 1024
-
-    # Calculate the number of chunks
-    num_chunks = len(audio) // chunk_size_bytes + 1
-
-    # Create the output folder if it doesn't exist
-    os.makedirs(output_folder, exist_ok=True)
-
-    # Split the audio into chunks
-    for i in range(num_chunks):
-        start = i * chunk_size_bytes
-        end = min((i + 1) * chunk_size_bytes, len(audio))
-        chunk = audio[start:end]
-
-        # Export the chunk to a new file
-        output_file = os.path.join(output_folder, f"chunk_{i + 1}.mp3")
-        chunk.export(output_file, format="mp3")
-
-
-def is_file_bigger_than_50mb(file_path):
-    # Get the size of the file in bytes
-    file_size_bytes = os.path.getsize(file_path)
-
-    # Convert bytes to megabytes
-    file_size_mb = file_size_bytes / (1024 * 1024)
-
-    # Check if the file size is greater than 50MB
-    return file_size_mb
-
 def is_ascii_letters_and_space(s):
     return all(ord(char) == 32 or 97 <= ord(char) <= 122 for char in s)
+
 
 def split_into_triplets(file_content):
     # Splitting the content based on '>>'
@@ -727,16 +671,16 @@ def split_into_triplets(file_content):
         else:
             i += 1  # Adjust the pointer to treat the next part as the first of a new triplet
 
-
     return triplets
 
-def create_records_from_triplets(triplets): # make triplets a json wrpped in 'records'
+
+def create_records_from_triplets(triplets):  # make triplets a json wrpped in 'records'
     records = {
         'records': [
             {'fields': {
                 'keyword': word,
-                'transcription': transcription,
-                'translation': translation + '<<',
+                'transcription': transcription.replace('/', ''),  # Removes '/' from transcription
+                'translation': translation.replace('<<', ''),  # Removes '<<' from translation
                 'study_status': '---',
                 'translation_extended': '',
                 'user': 'slawek',
@@ -746,4 +690,3 @@ def create_records_from_triplets(triplets): # make triplets a json wrpped in 're
         ]
     }
     return records
-

@@ -51,6 +51,8 @@ def move_file_to_repo(file_path):
 
     # Move the file:
     new_file_path = shutil.move(file_path, new_path)
+
+
     return
 
 
@@ -160,12 +162,13 @@ def transcribe_any_file_type(file_path):
 
     elif file_type == 'application/pdf':
         st.sidebar.write('PDF file detected')
-        trnsc_txt, text_file_name = convert_pdf_to_txt(file_path)
+        trnsc_txt, text_file_path = convert_pdf_to_txt(file_path)
         trnsc_txt = f'{trnsc_txt}.'  # add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
-        move_file_to_repo(file_path)  # cleanup
-        if old_file_path != file_path:
-            os.remove(old_file_path)
+        #text_file_path=f'data/{text_file_path}' #add
+        move_file_to_repo(text_file_path)  # cleanup
+        #if old_file_path != text_file_path:
+        os.remove(old_file_path)
 
         return trnsc_txt
 
@@ -195,7 +198,7 @@ def convert_pdf_to_txt(file):
 
     base_name = os.path.basename(file)
     name_without_ext = os.path.splitext(base_name)[0]
-    text_file_name = name_without_ext + ".txt"  # convert file path to txt
+    text_file_name = str(f'data/{name_without_ext}' + ".txt")  # convert file path to txt
 
     with open(text_file_name, 'w') as f:
         f.write(text)
@@ -395,10 +398,10 @@ def prepare_new_words_list(transcbd_text):
     # st.write('text converted to json ', text_converted_to_json)
 
     text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
-    st.write('stripped of duplicates in json', text_converted_to_json)
+    #st.write('stripped of duplicates in json', text_converted_to_json)
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
-    st.write('new_wors_list passed to save)', new_words_list)
+    #st.write('new_wors_list passed to save)', new_words_list)
     # display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid\
     # save_new_words_to_airtable(new_words_list)  # save to airtable
     # save to airtable
@@ -407,7 +410,7 @@ def prepare_new_words_list(transcbd_text):
 
 @timing_decorator
 def strip_of_duplicates(data_structure):
-    print('\nStarting testing for duplicates')
+    #print('\nStarting testing for duplicates')
     seen_keywords = set()
     unique_records = []
 
@@ -415,15 +418,16 @@ def strip_of_duplicates(data_structure):
         # Extract keyword and possibly modify the extraction method to remove spaces
         keyword = clean_up_text_to_ascii_no_space(record['fields']['keyword'])
 
-        print(f'Checking keyword: "{keyword}"')
+        #print(f'Checking keyword: "{keyword}"')
 
         # Check if the keyword has been seen before
         if keyword not in seen_keywords:
             seen_keywords.add(keyword)  # Mark this keyword as seen
             unique_records.append(record)  # Add the record if the keyword is unique
         else:
+            pass
             # Optionally, print the duplicate keyword for debugging or logging purposes
-            print(f'Duplicate keyword found and skipped: "{keyword}"')
+            #print(f'Duplicate keyword found and skipped: "{keyword}"')
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records

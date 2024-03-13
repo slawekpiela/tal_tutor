@@ -54,7 +54,7 @@ except AttributeError:
 
 try:  # uploading the files
     if st.session_state.button_3_pressed:
-        uploaded_file = st.sidebar.file_uploader("Wrzuć plik", type=['mov', 'mp4', 'wav', 'mp3', 'txt', 'pdf'])
+        uploaded_file = st.sidebar.file_uploader("Wrzuć plik", type=['mov', 'mp4', 'wav', 'mp3', 'txt','RTF', 'pdf'])
 
         file_path = save_uploaded_file(uploaded_file)  # save uploaded file
 
@@ -65,7 +65,7 @@ try:  # uploading the files
             text)  # result text is list with translations and create json cleaned to ascii
         # st.write('new words list: ', new_words_list)
         display_json_in_a_grid(new_words_list, is_set_full)
-        st.write('new_wors_b4_save in main', new_words_list)  # display in a grid\
+        #st.write('new_wors_b4_save in main', new_words_list)  # display in a grid\
         save_new_words_to_airtable(new_words_list)  # save to airtable
 
 

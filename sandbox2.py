@@ -2,12 +2,29 @@ import streamlit as st
 from st_aggrid import AgGrid
 import pandas as pd
 
-
+import magic
+from tal_utils import save_uploaded_file
 def main():
+
     st.title('Excel Viewer and Editor')
 
     # File uploader allows user to add their own Excel file
     uploaded_file = st.file_uploader("Upload Excel file", type=['xlsx'])
+    file_path= save_uploaded_file(uploaded_file)
+    st.write('uploadaed file', file_path)
+
+    file_type = magic.from_file(file_path, mime=True)
+    st.write('typ pliku:',file_type)
+
+
+
+    if file_type.startswith('application / vnd.openxmlformats - officedocument.spreadsheetml.sheet'):
+        st.sidebar.write('spreadsheet file detected')
+
+        trnsc_txt = 'excellsheet'
+        return trnsc_txt  #
+
+
 
     if uploaded_file is not None:
         # Read the Excel file into a DataFrame

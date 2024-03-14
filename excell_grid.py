@@ -3,11 +3,9 @@ from st_aggrid import AgGrid
 import pandas as pd
 
 
-def main():
+def populate_excell_grid(uploaded_file):
     st.title('Excel Viewer and Editor')
 
-    # File uploader allows user to add their own Excel file
-    uploaded_file = st.file_uploader("Upload Excel file", type=['xlsx'])
 
     if uploaded_file is not None:
         # Read the Excel file into a DataFrame

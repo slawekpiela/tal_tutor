@@ -1,24 +1,31 @@
-import requests, json, magic, fitz, os, whisper, shutil, subprocess, re, detectlanguage, nltk
-import pandas as pd
-import streamlit as st
-from pydub import AudioSegment
-import streamlit as st
-from configuration import whereby_api_key, tiny_api_key, assistant_id3, base_id, table_dictionary, airtable_token, \
-    api_detect_language
-from moviepy.editor import VideoFileClip
+import json
+import os
+import re
+import shutil
+import subprocess
+import time
 from datetime import timedelta, datetime
-from query_openai import query_model
-from airtable import Airtable
-from configuration import base_id, table_dictionary, airtable_token, api_detect_language
-from st_aggrid import AgGrid, GridOptionsBuilder, GridUpdateMode
 
+import detectlanguage
+import fitz
+import magic
+import nltk
+import pandas as pd
+import requests
+import streamlit as st
+import whisper
+from airtable import Airtable
+from moviepy.editor import VideoFileClip
+from st_aggrid import AgGrid
+
+from configuration import base_id, table_dictionary, airtable_token, api_detect_language
+from configuration import whereby_api_key, tiny_api_key
 from query_openai_no_assistant import query_no_assist
 
 detectlanguage.configuration.api_key = api_detect_language
 
 
 def timing_decorator(func):
-    import time
     def wrapper(*args, **kwargs):
         start = time.time()
         result = func(*args, **kwargs)
@@ -35,8 +42,6 @@ def save_uploaded_file(uploaded_file):
     data_dir = 'data/'
     file_path = os.path.join(data_dir, uploaded_file.name)
     with open(file_path, "wb") as f:
-        # uploaded_file.getvalue() is used for StringIO or BytesIO objects
-        # uploaded_file.read() is used here because file_uploader provides a BufferedIOBase object
         f.write(uploaded_file.read())
     return file_path
 
@@ -51,7 +56,6 @@ def move_file_to_repo(file_path):
 
     # Move the file:
     new_file_path = shutil.move(file_path, new_path)
-
 
     return
 
@@ -134,9 +138,20 @@ def transcribe_local(file):
 
 @timing_decorator
 def transcribe_any_file_type(file_path):
+    st.write('file path', file_path)
     file_type = magic.from_file(file_path, mime=True)
+
+    st.write(file_type)
     st.sidebar.write(file_type)
     old_file_path = file_path
+
+    if file_type.startswith('application/vnd.openxmlformats - officedocument.spreadsheetml.sheet'):
+        st.sidebar.write('spreadsheet file detected:', file_type)
+
+        if old_file_path != file_path:
+            os.remove(old_file_path)
+        trnsc_txt = 'excellsheet'
+        return trnsc_txt  #
 
     if file_type.startswith('audio') or file_type.startswith('application/octet-stream'):
         st.sidebar.write('Audio file detected')
@@ -165,9 +180,9 @@ def transcribe_any_file_type(file_path):
         trnsc_txt, text_file_path = convert_pdf_to_txt(file_path)
         trnsc_txt = f'{trnsc_txt}.'  # add dot at the end to aviod last sentence to be missed whlie parsing to sentences
 
-        #text_file_path=f'data/{text_file_path}' #add
+        # text_file_path=f'data/{text_file_path}' #add
         move_file_to_repo(text_file_path)  # cleanup
-        #if old_file_path != text_file_path:
+        # if old_file_path != text_file_path:
         os.remove(old_file_path)
 
         return trnsc_txt
@@ -182,7 +197,7 @@ def transcribe_any_file_type(file_path):
     if old_file_path != file_path:
         os.remove(old_file_path)
 
-    return trnsc_txt
+    return trnsc_txt  # returns text to be translated or dataset from excell/csv
 
     st.sidebar.write(f"Detected MIME type: {file_type}")
     move_file_to_repo(file_path)
@@ -317,12 +332,14 @@ def check_and_convert_to_mp3(file_path):  # converts to mp3 from wav or ma4
     # Check if the file is already an MP3
 
     if not file_path.lower().endswith('.mp3'):
-        output_file_path = os.path.splitext(file_path)[0] + ".mp3"  # create path for mp3
+        # create path for mp3
+        output_file_path = os.path.splitext(file_path)[0] + ".mp3"
         st.write('converting')
-        # Ensure numerical values are passed as strings
+        # convert to mp3
         subprocess.run(
-            ["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k", str(output_file_path)],
-            check=True)  # convert to mp3
+            ["ffmpeg", "-i", str(file_path), "-vn", "-ar", "44100", "-ac", "2", "-b:a", "192k",
+             str(output_file_path)],
+            check=True)
 
         st.write(output_file_path)
 
@@ -398,10 +415,10 @@ def prepare_new_words_list(transcbd_text):
     # st.write('text converted to json ', text_converted_to_json)
 
     text_converted_to_json = strip_of_duplicates(text_converted_to_json)  # remove duplicates from the list
-    #st.write('stripped of duplicates in json', text_converted_to_json)
+    # st.write('stripped of duplicates in json', text_converted_to_json)
     new_words_list, is_set_full = substract_airtable_from_translation(
         text_converted_to_json)  # leave only new words in the dataset
-    #st.write('new_wors_list passed to save)', new_words_list)
+    # st.write('new_wors_list passed to save)', new_words_list)
     # display_json_in_a_grid(new_words_list, is_set_full)  # display in a grid\
     # save_new_words_to_airtable(new_words_list)  # save to airtable
     # save to airtable
@@ -410,7 +427,7 @@ def prepare_new_words_list(transcbd_text):
 
 @timing_decorator
 def strip_of_duplicates(data_structure):
-    #print('\nStarting testing for duplicates')
+    # print('\nStarting testing for duplicates')
     seen_keywords = set()
     unique_records = []
 
@@ -418,7 +435,7 @@ def strip_of_duplicates(data_structure):
         # Extract keyword and possibly modify the extraction method to remove spaces
         keyword = clean_up_text_to_ascii_no_space(record['fields']['keyword'])
 
-        #print(f'Checking keyword: "{keyword}"')
+        # print(f'Checking keyword: "{keyword}"')
 
         # Check if the keyword has been seen before
         if keyword not in seen_keywords:
@@ -427,7 +444,7 @@ def strip_of_duplicates(data_structure):
         else:
             pass
             # Optionally, print the duplicate keyword for debugging or logging purposes
-            #print(f'Duplicate keyword found and skipped: "{keyword}"')
+            # print(f'Duplicate keyword found and skipped: "{keyword}"')
 
     # Update the original dictionary with the list of unique records
     data_structure['records'] = unique_records
@@ -519,6 +536,8 @@ def clean_up_text_to_ascii(ctext):
     )
     ctext = ctext.replace('\n', '')  # Remove '\n' from the text
     return ctext
+
+
 def clean_up_text_to_ascii_no_space(ctext):
     ctext = ''.join(
         char for char in ctext if

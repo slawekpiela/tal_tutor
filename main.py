@@ -8,18 +8,18 @@ from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_
 
 BUTTONS = {
     'Nowa lekcja': 'button_new_lesson',
-    'Pobierz transkrypcję ostatniej lekcji': 'button_new_lesson',
+    'Pobierz transkrypcję ostatniej lekcji': 'button_transcription',
     'Wrzuc plik do transkrypcji': 'button_upload_file'
 }
 
 
-def initializa_layout():
+def initialize_layout(st, buttons):
     # Initialize session state variables if they don't exist
-    for state in BUTTONS.values():
-        if state not in st.session_state:
-            st.session_state[state] = False
+    for value in buttons.values():
+        if value not in st.session_state:
+            st.session_state[value] = False
 
-    for key, value in BUTTONS.items():
+    for key, value in buttons.items():
         if st.sidebar.button(key):
             st.session_state[value] = True
 
@@ -63,7 +63,7 @@ def handle_upload_file_event():
     return True
 
 
-initializa_layout()
+initialize_layout(st, BUTTONS)
 
 if st.session_state[BUTTONS['Pobierz transkrypcję ostatniej lekcji']]:
     handle_download_last_recording_event()

@@ -713,3 +713,14 @@ def create_records_from_triplets(triplets):  # make triplets a json wrpped in 'r
         ]
     }
     return records
+
+
+def initializa_layout(st, buttons):
+    # Initialize session state variables if they don't exist
+    for state in buttons.values():
+        if state not in st.session_state:
+            st.session_state[state] = False
+
+    for key, value in buttons.items():
+        if st.sidebar.button(key):
+            st.session_state[value] = True

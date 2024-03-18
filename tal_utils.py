@@ -506,7 +506,7 @@ def process_sentence_group(sentence_group):
     joined_sentences = ' '.join(sentence_group)  # pull form list into string
     prompt = f'[START]{joined_sentences}[END]'
     language = 'Polish'
-    instruction = f"Use text between [START] and [END] List words in this format:  first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language then '<<' Here is the text: {prompt}"
+    instruction = f"Use text between [START] and [END] From text extract all phrasal verbs and extract all phrases and extract all words. List them  in this format:  first put charcters '>>' then  the unique word  then characters '>>' then  phonetic transcription then characters '>>' then  translation to {language} language then '<<' Here is the text: {prompt}"
 
     result_text = query_no_assist(instruction)
     # print('raw from llm: ', result_text)
@@ -550,7 +550,7 @@ def clean_up_text_to_ascii_no_space(ctext):
     return ctext
 
 
-@timing_decorator
+
 def clean_up_text_translated(ctext):
     ctext = ''.join(
         char for char in ctext if
@@ -645,7 +645,7 @@ def get_from_airtable():
     return airtable_records
 
 
-@timing_decorator
+
 def display_json_in_a_grid(new_words_list, is_set_full):
     if is_set_full:
         records_list = new_words_list['records']

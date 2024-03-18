@@ -6,10 +6,13 @@ from tal_utils import create_rooms, get_access_link_to_last_recording, get_last_
     move_file_to_repo, prepare_new_words_list, display_json_in_a_grid, \
     save_new_words_to_airtable
 
+
+
 BUTTONS = {
     'Nowa lekcja': 'button_new_lesson',
     'Pobierz transkrypcję ostatniej lekcji': 'button_transcription',
-    'Wrzuc plik do transkrypcji': 'button_upload_file'
+    'Wrzuc plik do transkrypcji': 'button_upload_file',
+    'Zrb coś innego':'button_other'
 }
 
 
@@ -22,7 +25,6 @@ def initialize_layout(st, buttons):
     for key, value in buttons.items():
         if st.sidebar.button(key):
             st.session_state[value] = True
-
 
 def handle_create_room_event():
     valid_data, data, godzina, email_n1, email_u1 = get_lesson_data()
@@ -61,6 +63,7 @@ def handle_upload_file_event():
     # st.write('new_wors_b4_save in main', new_words_list)  # display in a grid\
     save_new_words_to_airtable(new_words_list)  # save to airtable
     return True
+
 
 
 initialize_layout(st, BUTTONS)
